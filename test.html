@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>ESP32 AQI</title>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='initial-scale=1, viewport-fit=cover'>
+	<style>
+
+.good {
+  background-color: #68e143;
+}
+.moderate {
+  background-color: #ffff55;
+}
+.unhealthy-for-sensitive-groups {
+  background-color: #ef8533;
+}
+.unhealthy {
+  background-color: #ea3324;
+  color: #fff;
+}
+.very-unhealthy {
+  background-color: #8c1a4b;
+  color: #fff;
+}
+.hazardous {
+  background-color: #8c1a4b;
+  color: #fff;
+}
+.very-hazardous {
+  background-color: #731425;
+  color: #fff;
+}
+div.aqiBox {
+	position: relative;
+	height: 9em;
+	min-width: 9em;
+	padding: 0.5em;
+	margin: 0.75em;
+	font-weight: bold;
+	border: solid;
+	border-color: black;
+}
+div.aqiBoxTitle {
+	position: absolute;
+	top: 0.3em;
+	left: 0.5em;
+	font-size: 1em;
+}
+div.aqiBoxAqi {
+	font-size: 5em;
+	text-align: center;
+	width: 100%;
+}
+div.aqiBoxDetails {
+	position: absolute;
+	bottom: 0.5em;
+	right: 0.5em;
+	font-size: 1em;
+}
+.all-center {
+	margin: 0;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+div.bonusText {
+	margin: 1em;
+	font-weight: bold;
+	font-size: 2em;
+}
+	</style>
+</head>
+
+<body style="font-family: monospace" class="good">
+
+<div style="display:flex; justify-content:center; align-items:center; padding:1em">
+<div>
+
+	<div style="margin:3em">
+	<H1 style="justify-content: center; text-align:center; font-size: min(15em,25vw); font-weight: bold; margin: 0">20</h1>
+	<H2 style="justify-content: center; text-align:center; font-size: min(3em,5vw); margin: 0">Good 😀</h2>
+	</div>
+
+	<div style="display:flex; flex-wrap: wrap; justify-content:center; align-items:center; padding:1em; white-space:nowrap">
+	<div class="aqiBox hazardous">
+		<div class="aqiBoxTitle">PM 1.0</div>
+		<div class="aqiBoxAqi all-center">1</div>
+		<div class="aqiBoxDetails">1 µg/m<sup>3</sup></div>
+	</div>
+
+	<div class="aqiBox unhealthy-for-sensitive-groups">
+		<div class="aqiBoxTitle">PM 2.5</div>
+		<div class="aqiBoxAqi all-center">329</div>
+
+		<div class="aqiBoxDetails">30 µg/m<sup>3</sup></div>
+	</div>
+
+	<div class="aqiBox moderate">
+		<div class="aqiBoxTitle">PM 10.0</div>
+		<div class="aqiBoxAqi all-center">42</div>
+
+		<div class="aqiBoxDetails">30 µg/m<sup>3</sup></div>
+	</div>
+	</div>
+
+	<div style="display:flex; flex-wrap: wrap; justify-content:center; align-items:center; padding:1em; white-space:nowrap">
+	<div class="aqiBox hazardous">
+		<div class="aqiBoxTitle">CO2</div>
+		<div class="aqiBoxAqi all-center" style="font-size:4em">1024</div>
+		<div class="aqiBoxDetails">ppm</sup></div>
+	</div>
+	</div>
+
+	<div style="display:flex; flex-wrap: wrap; justify-content:center; align-items:center; padding:1em; white-space:nowrap">
+	  <div class="bonusText">23.1°C</div>
+	  <div class="bonusText">73.7°F</div>
+	  <div class="bonusText">RH: 46%</div>
+	  <div class="bonusText">1001.39 hPa</div>
+	</div>
+
+	<div style="text-align:left">
+PMSA003:    
+<br />
+MH-Z19C:    CO2:  500ppm  23°C     73.40°F
+<br />
+DS-020-20:  CO2: 1036ppm 
+<br />
+BME280:                   23.19°C  73.74 °F  1001.39 hPa  RH: 46.14%
+<br />
+	</div>
+
+</div>
+</div>
+
+</body>
+</html>
