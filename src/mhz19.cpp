@@ -25,8 +25,8 @@ bool ReadPacket(Stream* serial, uint8_t* buffer, int size, uint8_t cmd, unsigned
 
     while (serial->available() < size) {
         if (millis() - start_ms > timeout_ms) {
-            Serial.print("ERROR: timed out waiting for MH-Z19 response");
-            Serial.print("MH-Z19c ERROR, expect 9 bytes available, have: ");
+            Serial.print("ERROR: MH-Z19 timed out waiting for response");
+            Serial.print("ERROR: MH-Z19 expect 9 bytes available, have: ");
             Serial.println(serial->available());
             return false;
         }
@@ -34,13 +34,13 @@ bool ReadPacket(Stream* serial, uint8_t* buffer, int size, uint8_t cmd, unsigned
     }
 
     if (serial->readBytes(buffer, size) != size) {
-        Serial.print("ERROR: didn't read enough bytes\n");
+        Serial.print("ERROR: MH-Z19: didn't read enough bytes\n");
         return false;
     }
 
 
     if (buffer[0] != 0xff || buffer[1] != cmd || buffer[size-1] != Checksum(buffer, size)) {
-        Serial.print("ERROR: invalid MH-Z19 response\n");
+        Serial.print("ERROR: MH-Z19: invalid response\n");
 
         Serial.print("  Raw: ");
         for (int i = 0; i < size; ++i) {
@@ -61,7 +61,7 @@ bool SetAutoBackgroundCalibration(Stream* serial, bool abc_on, unsigned long tim
     unsigned long start_ms = millis();
 
 	while (serial->available()) {
-		Serial.print("MH-Z19 calibration off wtf ");
+		Serial.print("WARNING: MH-Z19 ABC wtf byte: ");
 		Serial.println(serial->read(), HEX);
 	}
 
@@ -72,7 +72,7 @@ bool SetAutoBackgroundCalibration(Stream* serial, bool abc_on, unsigned long tim
     for (int written = 0; written < sizeof(buffer); ) {
         written += serial->write(buffer + written, sizeof(buffer) - written);
         if (millis() - start_ms > timeout_ms) {
-            Serial.print("ERROR: timed out writing MH-Z19 command\n");
+            Serial.print("ERROR: MH-Z19: ABC timed out writing command\n");
             return false;
         }
     }
@@ -90,7 +90,7 @@ bool Read(Stream* serial, Data* data, unsigned long timeout_ms) {
     unsigned long start_ms = millis();
 
     while (serial->available()) {
-        Serial.print("MH-Z19 wtf ");
+		Serial.print("WARNING: MH-Z19 Read wtf byte: ");
         Serial.println(static_cast<uint8_t>(serial->read()), HEX);
     }
 
@@ -98,13 +98,13 @@ bool Read(Stream* serial, Data* data, unsigned long timeout_ms) {
     for (int written = 0; written < sizeof(buffer); ) {
         written += serial->write(buffer + written, sizeof(buffer) - written);
         if (millis() - start_ms > timeout_ms) {
-            Serial.print("ERROR: timed out writing MH-Z19 command\n");
+            Serial.print("ERROR: MH-Z19 Read timed out writing command\n");
             return false;
         }
     }
 
     if (!ReadPacket(serial, buffer, sizeof(buffer), buffer[2], timeout_ms)) {
-        Serial.print("ERROR: reading mhz-19c packet\n");
+        Serial.print("ERROR: MH-Z19: error reading packet\n");
         return false;
     }
 

@@ -13,13 +13,13 @@ namespace pmsx003 {
 
 bool VerifyPacket(uint8_t* packet, int size) {
 	if (size < 6) {
-		Serial.print("ERROR Invalid Packet Size!\n");
+		Serial.print("ERROR: Plantower: Invalid Packet Size!\n");
 		return false;
 	}
 
 	// First two magic bytes: 0x42 0x4d
 	if (packet[0] != 0x42 || packet[1] != 0x4d) {
-		Serial.print("Invalid packet, unxpected magic bytes: ");
+		Serial.print("ERROR: Plantower: Invalid packet, unxpected magic bytes: ");
 		Serial.print(packet[0], HEX);
 		Serial.print(" ");
 		Serial.print(packet[1], HEX);
@@ -30,12 +30,12 @@ bool VerifyPacket(uint8_t* packet, int size) {
 	// remaining bytes (does not includ magic, or length)
 	uint16_t frameSize = (packet[2] << 8) | packet[3];
 	if ((frameSize + 4) > size) {
-		Serial.print("Invalid packet, too long! Frame length: ");
+		Serial.print("ERROR: Plantower: Invalid packet, too long! Frame length: ");
 		Serial.print(frameSize);
 		Serial.print("\n");
 		return false;
 	} else if ((frameSize + 4) < size) {
-		Serial.print("info: frame length+6 < buffer size: ");
+		Serial.print("WARN: Plantower: frame length+6 < buffer size: ");
 		Serial.print(frameSize);
 		Serial.print("\n");
 	}
@@ -46,7 +46,7 @@ bool VerifyPacket(uint8_t* packet, int size) {
 		checksum += packet[i];
 	}
 	if (checksum != ((packet[checksumOffset] << 8) | packet[checksumOffset+1])) {
-		Serial.print("Invalid packet, unxpected checksum, calculated: ");
+		Serial.print("ERROR: Plantower: Invalid packet, unxpected checksum, calculated: ");
 		Serial.print(checksum >> 8, HEX);
 		Serial.print(" ");
 		Serial.print(checksum & 0xff, HEX);
@@ -72,7 +72,7 @@ bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms) {
             break;
         }
         if (millis() - start_time_ms >= timeout_ms) {
-            Serial.print("ERROR: timed out waiting for PMSx003 data\n");
+            Serial.print("ERROR: PMSx003: timed out waiting for data\n");
             return false;
         }
         if (c == -1) {
@@ -80,7 +80,7 @@ bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms) {
             delay(10);
             continue;
         } else {
-            Serial.print("Waiting for 0x42, got: 0x");
+            Serial.print("WARN: PMSx003: Waiting for 0x42, got: 0x");
             Serial.println(c, HEX);
             Serial.println(serial->read(), HEX);
             continue;
@@ -91,13 +91,13 @@ bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms) {
     uint8_t buffer[kPacketSize] = {0};
     while (serial->available() < kPacketSize) {
         if (millis() - start_time_ms >= timeout_ms) {
-            Serial.print("ERROR: timed out waiting for PMSx003 data\n");
+            Serial.print("ERROR: PMSx003: timed out waiting for PMSx003 data\n");
             return false;
         }
         delay(10);
     }
     if (serial->readBytes(buffer, kPacketSize) < kPacketSize) {
-        Serial.print("WTF: did not read enough bytes");
+        Serial.print("ERROR: PMSx003: WTF: did not read enough bytes");
         return false;
     }
 
@@ -115,7 +115,7 @@ bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms) {
 	*/
 
     if (!VerifyPacket(buffer, sizeof(buffer))) {
-        Serial.print("ERROR: Packet error!\n");
+        Serial.print("ERROR: PMSx003: Packet error!\n");
         return false;
     }
 

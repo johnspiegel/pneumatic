@@ -1,16 +1,16 @@
 TODO:
     * Hygiene:
+        * Render time to web page, Wifi info, RSSI, channel, etc., number of wifi disconnects
+        * Upload to sensor.community
+        * Periodic background scan for better wifi channel
+        * Two colored LED lights - one for Co2, one for AQI
         * clean up wifi code
         * Reorganize Code - move bme stuff to separate files, set up task poll functions
-        * squash commits into one
-        * Upload to github
         * Add tests
-        * Render time to web page, Wifi info, RSSI, channel, etc.
-        * Upload to sensor.community
-        * Two colored LED lights - one for Co2, one for AQI
     * Bonus fun:
         * Auto-Refresh status page - query option (ESP async webserver)
         * keep a circular buffer of the last minute, show SMA
+        * Keep timestamps for sensor readings
         * quantize logs, show hourly graph (minutely?)
         * Keep logs on flash?
         * try polling BME less often, less self-heating?

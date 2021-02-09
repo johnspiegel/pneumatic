@@ -6,6 +6,8 @@
 #include <esp_wifi.h>
 #include <vector>
 
+#include <ui.h>
+
 namespace net_manager {
 
 WiFiManager wifi_manager;
@@ -118,6 +120,7 @@ bool Connect(unsigned long timeout_ms) {
             Serial.print("Wifi: no saved SSID, starting captive portal...");
             // wifi_manager.setShowPassword(true);
 
+            wifi_manager.setConfigPortalTimeout(3);  // blocking
             wifi_manager.setConnectRetries(3);  // blocking
             wifi_manager.setSaveConnectTimeout(/*seconds=*/ 20);  // blocking
             wifi_manager.setConnectTimeout(/*seconds=*/ 20);  // blocking
@@ -206,11 +209,19 @@ bool Connect(unsigned long timeout_ms) {
         status = STATUS_CONNECTING;
 
         WiFi.begin();
+        unsigned long backoff_ms = 10;
         while (status != STATUS_CONNECTED && (millis() - start_time_ms) < timeout_ms) {
             Serial.print("WiFi connecting... Status: ");
             Serial.println(status);
             if (status == STATUS_DISCONNECTED) {
+                // WiFi.disconnect(/*wifioff=*/ false, /*eraseap=*/ false);
+                WiFi.disconnect(/*wifioff=*/ true);
+                Serial.print("WiFi: sleep for ");
+                Serial.println(ui::MillisHumanReadable(backoff_ms));
+                delay(backoff_ms);
+                backoff_ms *= 2;
                 WiFi.begin();
+                status = STATUS_CONNECTING;
             }
             delay(1000);
             // status = WiFi.status();
@@ -260,6 +271,21 @@ bool Connect(unsigned long timeout_ms) {
         Serial.println(WiFi.broadcastIP().toString());
         Serial.print("Subnet CIDR:     ");
         Serial.println(WiFi.subnetCIDR());
+
+        WiFi.onEvent(
+            [](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Serial.print("WiFi lost connection. Reason: ");
+                Serial.println(info.disconnected.reason);
+                Serial.print("WiFi not connected; status: ");
+                Serial.println(WiFi.status());
+                // WiFi.persistent(false);
+                WiFi.disconnect(true);
+                //WiFiConnected = false;
+                status = STATUS_DISCONNECTED;
+                ESP.restart();
+            },
+            WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
+
         return true;
     }
 
@@ -269,18 +295,23 @@ bool Connect(unsigned long timeout_ms) {
 void DoTask(void* unused) {
     const unsigned long kResetIntervalMs = 60 * 60 * 1000;  // 1 hr
     unsigned long last_connect_time = millis();
+    unsigned long last_print_time_ms = 0;
     for (;;) {
-        Serial.print("net_manager::DoTask(): core: ");
-        Serial.println(xPortGetCoreID());
+        if ((millis() - last_print_time_ms) > 10 * 60 * 1000 || !last_print_time_ms) {
+            Serial.print("net_manager::DoTask(): core: ");
+            Serial.println(xPortGetCoreID());
+            last_print_time_ms = millis();
+        }
         if (millis() - last_connect_time > kResetIntervalMs) {
             Serial.print("WiFi: Resetting...");
-            // WiFi.disconnect(/*wifioff=*/ true, /*eraseap=*/ true);
+            // WiFi.disconnect(/*wifioff=*/ true, /*eraseap=*/ false);
             WiFi.disconnect(/*wifioff=*/ true);
         }
         if (WiFi.status() == WL_CONNECTED) {
             delay(5000);
             continue;
         }
+
 
         Serial.print("WiFi not connected; status: ");
         Serial.println(WiFi.status());

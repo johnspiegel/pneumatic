@@ -10,7 +10,7 @@ namespace dsco220 {
 bool Read(TwoWire* i2c, Data* data) {
 
     while (i2c->available()) {
-        Serial.print("WTF DS-CO2-20 available before: ");
+        Serial.print("WTF: DS-CO2-20: available before: ");
         Serial.println(i2c->read(), HEX);
     }
 
@@ -24,7 +24,7 @@ bool Read(TwoWire* i2c, Data* data) {
         delay(10);
     }
     if (i2c->available() < kPacketSize) {
-        Serial.print("DS ERROR, expect 12 bytes available, have: ");
+        Serial.print("ERROR: DS-CO2-20: expect 12 bytes available, have: ");
         Serial.println(i2c->available());
         return false;
     }
@@ -33,7 +33,7 @@ bool Read(TwoWire* i2c, Data* data) {
     i2c->readBytes(buffer, sizeof(buffer));
 
     if (!pmsx003::VerifyPacket(buffer, sizeof(buffer))) {
-        Serial.print("ERROR Packet error!\n");
+        Serial.print("ERROR: DS-CO2-20: Packet error!\n");
         Serial.print("  Raw: ");
         for (int i = 0; i < 12; ++i) {
             Serial.print(buffer[i], HEX);
@@ -55,7 +55,7 @@ bool Read(Stream* serial, Data* data) {
     unsigned long timeout_ms = 2000;
 
     while (serial->available()) {
-        Serial.print("WTF DS-CO2-20 available before: ");
+        Serial.print("WTF: DS-CO2-20: available before: ");
         Serial.println(serial->read(), HEX);
     }
 
@@ -69,7 +69,7 @@ bool Read(Stream* serial, Data* data) {
             break;
         }
         if (millis() - start_time_ms >= timeout_ms) {
-            Serial.print("ERROR: timed out waiting for DS-CO2-20 data\n");
+            Serial.print("ERROR: DS-CO2-20: timed out waiting for data\n");
             return false;
         }
         if (c == -1) {
@@ -77,7 +77,7 @@ bool Read(Stream* serial, Data* data) {
             delay(10);
             continue;
         } else {
-            Serial.print("Waiting for 0x42, got: 0x");
+            Serial.print("WARN: DS-CO2-20: Waiting for 0x42, got: 0x");
             Serial.println(c, HEX);
             Serial.println(serial->read(), HEX);
             continue;
@@ -88,18 +88,18 @@ bool Read(Stream* serial, Data* data) {
     uint8_t buffer[kPacketSize] = {0};
     while (serial->available() < kPacketSize) {
         if (millis() - start_time_ms >= timeout_ms) {
-            Serial.print("ERROR: timed out waiting for DS-CO2-20 data\n");
+            Serial.print("ERROR: DS-CO2-20: timed out waiting for data\n");
             return false;
         }
         delay(10);
     }
     if (serial->readBytes(buffer, kPacketSize) < kPacketSize) {
-        Serial.print("WTF: did not read enough bytes");
+        Serial.print("WTF: DS-CO2-20: did not read enough bytes");
         return false;
     }
 
     if (!pmsx003::VerifyPacket(buffer, sizeof(buffer))) {
-        Serial.print("ERROR Packet error!\n");
+        Serial.print("ERROR: DS-CO2-20: Packet error!\n");
         Serial.print("  Raw: ");
         for (int i = 0; i < 12; ++i) {
             Serial.print(buffer[i], HEX);
@@ -121,6 +121,7 @@ void TaskPollDsCo2(void* task_data_arg) {
     TwoWire* i2c = reinterpret_cast<TaskData*>(task_data_arg)->i2c;
     Data* data = reinterpret_cast<TaskData*>(task_data_arg)->data;
 
+    unsigned long last_print_time_ms = 0;
     // int dummy_co2ppm = 0;
     for (;;) {
         bool success = false;
@@ -128,7 +129,7 @@ void TaskPollDsCo2(void* task_data_arg) {
             success = Read(i2c, data);
             xSemaphoreGive(i2c_mutex);
         } else {
-            Serial.print("ERROR: DS-CO2-20 failed to acquire i2c mutex\n");
+            Serial.print("ERROR: DS-CO2-20: failed to acquire i2c mutex\n");
             continue;
         }
         /*
@@ -142,10 +143,17 @@ void TaskPollDsCo2(void* task_data_arg) {
         */
 
         if (!success) {
-            Serial.print("DS ERROR");
+            Serial.print("ERROR: DS-CO2-20 Read() error");
             delay(5000);
             continue;
         }
+
+        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
+            delay(1000);
+            continue;
+        }
+
+        last_print_time_ms = millis();
 
         Serial.print("TaskPollDsCo2(): core: ");
         Serial.println(xPortGetCoreID());
@@ -154,7 +162,6 @@ void TaskPollDsCo2(void* task_data_arg) {
         Serial.print(data->co2_ppm);
         Serial.print("ppm ");
         Serial.print("\n");
-
 
         delay(1000);
     }

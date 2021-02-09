@@ -63,7 +63,7 @@ void BlinkIt(void* unused) {
 }
 
 void PollPmsx003(void* unused) {
-    unsigned long last_read_time_ms = -1;
+    unsigned long last_print_time_ms = 0;
     for (;;) {
         if (!pmsx003::Read(&pms_serial, &pmsx003_data, /*timeout_ms=*/ 5000)) {
             Serial.print("ERROR: failed to read PMSX003 sensor");
@@ -71,17 +71,15 @@ void PollPmsx003(void* unused) {
             continue;
         }
 
+        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
+            continue;
+        }
+        last_print_time_ms = millis();
+
         Serial.print("PollPmsx003(): core: ");
         Serial.println(xPortGetCoreID());
-        Serial.print("PMSx003 data:");
-        unsigned long now_ms = millis();
-        if (last_read_time_ms != -1) {
-            Serial.print("  [Elapsed: ");
-            Serial.print(now_ms - last_read_time_ms);
-            Serial.print(" ms]");
-        }
-        last_read_time_ms = now_ms;
 
+        Serial.print("PMSx003 data:");
         Serial.print("  [ug/m^3] PM1.0: ");
         Serial.print(pmsx003_data.pm1);
         Serial.print("  PM2.5: ");
@@ -95,7 +93,7 @@ void PollPmsx003(void* unused) {
 }
 
 void PollMhz19(void* unused) {
-    long last_read_time_ms = -1;
+    unsigned long last_print_time_ms = 0;
     for (;;) {
         if (!mhz19::Read(&mhz19_serial, &mhz19_data, /*timeout_ms=*/ 5000)) {
             Serial.print("ERROR: failed to read MHZ-19c sensor");
@@ -103,16 +101,25 @@ void PollMhz19(void* unused) {
             continue;
         }
 
+        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
+            delay(2000);
+            continue;
+        }
+        last_print_time_ms = millis();
+
+
         Serial.print("PollMhz19(): core: ");
         Serial.println(xPortGetCoreID());
         Serial.print("MH-Z19c Results: ");
+        /*
         long now_ms = millis();
         if (last_read_time_ms != -1) {
-            // Serial.print("  [Elapsed: ");
-            // Serial.print(now_ms - last_read_time_ms);
-            // Serial.print(" ms]\n");
+            Serial.print("  [Elapsed: ");
+            Serial.print(now_ms - last_read_time_ms);
+            Serial.print(" ms]\n");
         }
         last_read_time_ms = now_ms;
+        */
         Serial.print("  CO2: ");
         Serial.print(mhz19_data.co2_ppm);
         Serial.print("ppm");
@@ -121,7 +128,7 @@ void PollMhz19(void* unused) {
         Serial.print(" °C ");
         Serial.print(ui::CToF(mhz19_data.temp_c));
         Serial.print(" °F\n");
-        delay(5000);
+        delay(2000);
     }
 
     vTaskDelete(NULL);
@@ -130,6 +137,7 @@ void PollMhz19(void* unused) {
 bme280::Data bme_data = {0};
 
 void PollBme(void* unused) {
+    unsigned long last_print_time_ms = 0;
     for (;;) {
         if (xSemaphoreTake(i2c_mutex, 1000 / portTICK_PERIOD_MS) == pdTRUE) {
             bme_data.temp_c = bme.readTemperature();
@@ -140,6 +148,12 @@ void PollBme(void* unused) {
             Serial.print("ERROR: BME280 failed to acquire i2c mutex\n");
             continue;
         }
+
+        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
+            delay(1000);
+            continue;
+        }
+        last_print_time_ms = millis();
 
         Serial.print("PollBme(): core: ");
         Serial.println(xPortGetCoreID());
@@ -207,6 +221,22 @@ void setup()
 
     Serial.print("setup(): core: ");
     Serial.println(xPortGetCoreID());
+
+    // This chipid is the mac address, but reversed? I'll just use the actual mac address.
+    String esp_chipid;
+	uint64_t chipid_num;
+	chipid_num = ESP.getEfuseMac();
+	esp_chipid = String((uint16_t)(chipid_num >> 32), HEX);
+	esp_chipid += String((uint32_t)chipid_num, HEX);
+    Serial.print("setup(): esp_chip_id: ");
+    Serial.println(esp_chipid);
+    char mac[17] = {0};
+    for (int i = 0; i < 6; ++i) {
+        // uint8_t val = chipid_num >> (8 * (7-i)) & 0xff;
+        snprintf(mac + i*2, 3, "%02x", reinterpret_cast<uint8_t*>(&chipid_num)[i]);
+    }
+    Serial.print("setup(): e_fuse_mac: ");
+    Serial.println(mac);
 
     pixels.begin();
     pixels.setPixelColor(0, pixels.Color(0, 0 , 0));
@@ -352,16 +382,16 @@ void setup()
 }
 
 // Don't do anything in loop() so Arduino can do its stuff without delay.
-unsigned long last_print_time_ms = -15000;
+unsigned long last_print_time_ms = 0;
 void loop() {
-    unsigned long now_ms = millis();
-    if (now_ms - last_print_time_ms > 10000) {
-        Serial.println("----------------------------------------");
-        Serial.print("Uptime: ");
-        Serial.println(ui::MillisHumanReadable(now_ms));
-        Serial.print("loop(): core: ");
-        Serial.println(xPortGetCoreID());
-        Serial.println("----------------------------------------");
-        last_print_time_ms = now_ms;
+    if ((millis() - last_print_time_ms) < 1 * 60 * 1000 && last_print_time_ms) {
+        return;
     }
+    last_print_time_ms = millis();
+
+    Serial.println("----------------------------------------");
+    Serial.print("loop(): Uptime: ");
+    Serial.print(ui::MillisHumanReadable(millis()));
+    Serial.print("  core: ");
+    Serial.println(xPortGetCoreID());
 }
