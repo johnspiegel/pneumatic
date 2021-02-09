@@ -166,11 +166,18 @@ int32_t co2Color(int co2_ppm) {
 }
 
 void TaskServeWeb(void* task_data_arg) {
+    Serial.println("ServeWeb: Starting task...");
     TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
     WiFiServer server(/*port=*/ 80);
     bool server_started = false;
 
+    unsigned long last_print_time_ms = 0;
     for (;;) {
+        if ((millis() - last_print_time_ms) > 10 * 60 * 1000 || !last_print_time_ms) {
+            Serial.print("ui::TaskServeWeb(): core: ");
+            Serial.println(xPortGetCoreID());
+            last_print_time_ms = millis();
+        }
         // TODO: register for wifi disconnect signal to eliminate restart races.
         if (!WiFi.isConnected() || !server_started) {
             server.end();
@@ -198,20 +205,30 @@ void TaskServeWeb(void* task_data_arg) {
         }
 
         // long connectTime = millis();
-        String header;
+        String request;
         Serial.println("New http client");
+        unsigned long client_start_time_ms = millis();
         while (client.connected()) {
-            while (client.available()) {
+            if (millis() - client_start_time_ms > 5000) {
+                Serial.println("ERROR: TaskServeWeb: Timed out waiting for client");
+                client.stop();
+                continue;
+            }
+
+            if (client.available()) {
                 char c = client.read();
                 if (c != '\r') {
-                    header += c;
+                    request += c;
                 }
+                continue;
             }
-            if (header[header.length()-1] == '\n') {
-                Serial.print("HTTP Request:\n----\n");
-                Serial.print(header);
-                Serial.print("----\n");
+            if (request[request.length()-1] != '\n') {
+                continue;
             }
+
+            Serial.print("HTTP Request:\n----\n");
+            Serial.print(request);
+            Serial.print("----\n");
 
             int pm1aqi = usAQI(task_data->pmsx003_data->pm1);
             int pm25aqi = usAQI(task_data->pmsx003_data->pm25);
@@ -275,6 +292,7 @@ void TaskServeWeb(void* task_data_arg) {
 
             client.print("\n");
             client.stop();
+            Serial.println("TaskServeWeb: client finished");
             continue;
         }
     }

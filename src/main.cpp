@@ -14,6 +14,7 @@
 #include "mhz19.h"
 #include "net_manager.h"
 #include "pmsx003.h"
+#include "sensor_community.h"
 #include "ui.h"
 
 #ifndef LED_BUILTIN
@@ -337,13 +338,6 @@ void setup()
         /*param=*/ nullptr,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
-    xTaskCreate(
-        net_manager::DoTask,
-        "NetManager",
-        /*stack_size=*/ 10000,
-        /*param=*/ nullptr,
-        /*priority=*/ next_priority++,
-        /*handle=*/ nullptr);
 
     ui_task_data.pmsx003_data = &pmsx003_data;
     ui_task_data.mhz19_data = &mhz19_data;
@@ -357,10 +351,26 @@ void setup()
         /*param=*/ &ui_task_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
+
+    xTaskCreate(
+        net_manager::DoTask,
+        "NetManager",
+        /*stack_size=*/ 4*1024,
+        /*param=*/ nullptr,
+        /*priority=*/ next_priority++,
+        /*handle=*/ nullptr);
+
+    xTaskCreate(
+        sensor_community::TaskSensorCommunity,
+        "TaskSensorCommunity",
+        /*stack_size=*/ 4*1024,
+        /*param=*/ &ui_task_data,
+        /*priority=*/ next_priority++,
+        /*handle=*/ nullptr);
     xTaskCreate(
         ui::TaskServeWeb,
         "TaskServeWeb",
-        /*stack_size=*/ 64*1024,
+        /*stack_size=*/ 16*1024,
         /*param=*/ &ui_task_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);

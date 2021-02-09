@@ -168,6 +168,7 @@ bool Connect(unsigned long timeout_ms) {
         esp_wifi_set_config(WIFI_IF_STA, &config);
 
         WiFi.disconnect(/*wifioff=*/ true);
+        status = STATUS_DISCONNECTED;
         auto* ap_info = ScanFor(ssid, timeout_ms);
         if (!ap_info) {
             Serial.print("WiFi: Failed to find SSID: ");
@@ -199,6 +200,7 @@ bool Connect(unsigned long timeout_ms) {
 
         Serial.print("WiFi: Connecting...\n");
         WiFi.disconnect(/*wifioff=*/ true);
+        status = STATUS_DISCONNECTED;
         // WiFi.mode(WIFI_OFF);
         WiFi.mode(WIFI_STA);
         // WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
@@ -293,7 +295,7 @@ bool Connect(unsigned long timeout_ms) {
 }
 
 void DoTask(void* unused) {
-    const unsigned long kResetIntervalMs = 60 * 60 * 1000;  // 1 hr
+    const unsigned long kResetIntervalMs = 48 * 60 * 60 * 1000;  // 1 hr
     unsigned long last_connect_time = millis();
     unsigned long last_print_time_ms = 0;
     for (;;) {
@@ -306,6 +308,9 @@ void DoTask(void* unused) {
             Serial.print("WiFi: Resetting...");
             // WiFi.disconnect(/*wifioff=*/ true, /*eraseap=*/ false);
             WiFi.disconnect(/*wifioff=*/ true);
+            status = STATUS_DISCONNECTED;
+            delay(1000);
+            last_connect_time = millis();
         }
         if (WiFi.status() == WL_CONNECTED) {
             delay(5000);

@@ -143,7 +143,7 @@ void TaskPollDsCo2(void* task_data_arg) {
         */
 
         if (!success) {
-            Serial.print("ERROR: DS-CO2-20 Read() error");
+            Serial.print("ERROR: DS-CO2-20 Read() error\n");
             delay(5000);
             continue;
         }

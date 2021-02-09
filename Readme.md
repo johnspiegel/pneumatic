@@ -7,6 +7,9 @@ TODO:
         * clean up wifi code
         * Reorganize Code - move bme stuff to separate files, set up task poll functions
         * Add tests
+        * Pin tasks to cores, and use real task priorities
+        * Check for errrors from task creates
+
     * Bonus fun:
         * Auto-Refresh status page - query option (ESP async webserver)
         * keep a circular buffer of the last minute, show SMA
