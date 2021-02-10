@@ -70,15 +70,12 @@ enum Status {
 
 Status status = STATUS_DISCONNECTED;
 
-bool Connect(unsigned long timeout_ms) {
+bool Setup() {
     // don't persist to flash
     WiFi.persistent(true);
     // Triggers low-level esp wifi init
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(false);
-
-    // Serial.print("WiFi connecting... Status: ");
-    // Serial.println(WiFi.status(););
+    // WiFi.setSleep(false);
 
     // Set up some event handlers
     WiFi.onEvent(
@@ -104,6 +101,10 @@ bool Connect(unsigned long timeout_ms) {
         },
         WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
 
+    return true;
+}
+
+bool Connect(unsigned long timeout_ms) {
     wifi_config_t config = {0};
     char ssid[sizeof(config.sta.ssid) + 1] = {0};
     char password[sizeof(config.sta.password) + 1] = {0};
@@ -274,6 +275,7 @@ bool Connect(unsigned long timeout_ms) {
         Serial.print("Subnet CIDR:     ");
         Serial.println(WiFi.subnetCIDR());
 
+        /*
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Serial.print("WiFi lost connection. Reason: ");
@@ -281,12 +283,13 @@ bool Connect(unsigned long timeout_ms) {
                 Serial.print("WiFi not connected; status: ");
                 Serial.println(WiFi.status());
                 // WiFi.persistent(false);
-                WiFi.disconnect(true);
+                // WiFi.disconnect(true);
                 //WiFiConnected = false;
                 status = STATUS_DISCONNECTED;
-                ESP.restart();
+                // ESP.restart();
             },
             WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
+        */
 
         return true;
     }
@@ -295,7 +298,9 @@ bool Connect(unsigned long timeout_ms) {
 }
 
 void DoTask(void* unused) {
-    const unsigned long kResetIntervalMs = 48 * 60 * 60 * 1000;  // 1 hr
+    Setup();
+
+    const unsigned long kResetIntervalMs = 48 * 60 * 60 * 1000;
     unsigned long last_connect_time = millis();
     unsigned long last_print_time_ms = 0;
     for (;;) {
@@ -304,19 +309,17 @@ void DoTask(void* unused) {
             Serial.println(xPortGetCoreID());
             last_print_time_ms = millis();
         }
-        if (millis() - last_connect_time > kResetIntervalMs) {
+        if (status == STATUS_CONNECTED && millis() - last_connect_time > kResetIntervalMs) {
             Serial.print("WiFi: Resetting...");
             // WiFi.disconnect(/*wifioff=*/ true, /*eraseap=*/ false);
             WiFi.disconnect(/*wifioff=*/ true);
             status = STATUS_DISCONNECTED;
-            delay(1000);
-            last_connect_time = millis();
+            delay(10);
         }
-        if (WiFi.status() == WL_CONNECTED) {
+        if (status == STATUS_CONNECTED && WiFi.status() == WL_CONNECTED) {
             delay(5000);
             continue;
         }
-
 
         Serial.print("WiFi not connected; status: ");
         Serial.println(WiFi.status());

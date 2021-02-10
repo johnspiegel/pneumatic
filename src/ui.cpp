@@ -200,6 +200,7 @@ void TaskServeWeb(void* task_data_arg) {
 
         if (!client) {
             // Serial.println("ServeWeb: Got no for HTTP connection...");
+            client.stop();
             delay(10);
             continue;
         }

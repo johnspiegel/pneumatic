@@ -1,5 +1,6 @@
 TODO:
     * Hygiene:
+        * Don't keep adding duplicate wifi event callbacks
         * Render time to web page, Wifi info, RSSI, channel, etc., number of wifi disconnects
         * Upload to sensor.community
         * Periodic background scan for better wifi channel
@@ -9,6 +10,14 @@ TODO:
         * Add tests
         * Pin tasks to cores, and use real task priorities
         * Check for errrors from task creates
+        * refactor to do AQI classes as a list of structs.
+
+    * other integrations:
+        * local influxdb
+        * Chillibits ?
+        * opensensemap ?
+        * weather underground?
+        * doiot.ru ?
 
     * Bonus fun:
         * Auto-Refresh status page - query option (ESP async webserver)

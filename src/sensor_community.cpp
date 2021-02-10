@@ -24,6 +24,7 @@ bool Push(const ui::TaskData* data) {
     http_client.setTimeout(20000);
     http_client.setUserAgent(String(kSoftwareVersion) + '/' + macAddress);
 
+    // Send PM data.
     String payload = R"({
             "software_version": "{software_version}",
             "sensordatavalues": [
@@ -50,7 +51,6 @@ bool Push(const ui::TaskData* data) {
     http_client.addHeader("X-MAC-ID", "esp32-" + macAddress);
     http_client.addHeader("X-PIN", "1");  // PMSX003
     int err = http_client.POST(payload);
-
     if (err >= HTTP_CODE_OK && err <= HTTP_CODE_ALREADY_REPORTED) {
         Serial.print("SensorCommunity: Data pushed: ");
         Serial.println(err);
@@ -60,8 +60,46 @@ bool Push(const ui::TaskData* data) {
         Serial.println(err);
         Serial.println(http_client.getString());
     }
-
     http_client.end();
+
+    // Send BME data.
+    payload = R"({
+            "software_version": "{software_version}",
+            "sensordatavalues": [
+                { "value_type": "temperature", "value": "{temperature}" },
+                { "value_type": "humidity", "value": "{humidity}" },
+                { "value_type": "pressure", "value": "{pressure}" }
+            ]
+        })";
+    payload.replace("{software_version}", kSoftwareVersion);
+    payload.replace("{temperature}", String(data->bme_data->temp_c));
+    payload.replace("{humidity}", String(data->bme_data->humidityPercent));
+    payload.replace("{pressure}", String(data->bme_data->pressurePa));
+
+    Serial.print("SensorCommunity: Payload:\n");
+    Serial.print(payload);
+
+    if (!http_client.begin(wifi_client, "api.sensor.community", 80,
+                           "/v1/push-sensor-data/", /*https=*/ false)) {
+        return false;
+    }
+
+    http_client.addHeader("Content-Type", "application/json");
+    http_client.addHeader("X-Sensor", "esp32-" + macAddress);
+    http_client.addHeader("X-MAC-ID", "esp32-" + macAddress);
+    http_client.addHeader("X-PIN", "11");  // BME280
+    err = http_client.POST(payload);
+    if (err >= HTTP_CODE_OK && err <= HTTP_CODE_ALREADY_REPORTED) {
+        Serial.print("SensorCommunity: Data pushed: ");
+        Serial.println(err);
+        Serial.println(http_client.getString());
+    } else {
+        Serial.print("ERROR: SensorCommunity: http return: ");
+        Serial.println(err);
+        Serial.println(http_client.getString());
+    }
+    http_client.end();
+
     return true;
 }
 
@@ -77,8 +115,8 @@ void TaskSensorCommunity(void* task_param) {
         Serial.println(xPortGetCoreID());
         Serial.print("SensorCommunity: Pushing data...\n");
         Push(ui_task_data);
-        Serial.print("SensorCommunity: waiting for 1m...\n");
-        delay(60000);
+        Serial.print("SensorCommunity: waiting for 2m25s...\n");
+        delay(145000);
     }
     vTaskDelete(NULL);
 }
