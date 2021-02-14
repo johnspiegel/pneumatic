@@ -58,6 +58,7 @@ float calcAQI(int val, int concL, int concH, int aqiL, int aqiH) {
     return aqiL + float(val - concL) * (aqiH - aqiL)/(concH - concL);
 }
 
+// TODO: fix this - the thresholds are all different for the different sizes!
 float usAQI(int val) {
     if (val > 350) {
         return calcAQI(val, 351, 500, 401, 500);
@@ -165,6 +166,64 @@ int32_t co2Color(int co2_ppm) {
     }
 }
 
+void DoVarz(WiFiClient* client, const TaskData* task_data) {
+    client->print("HTTP/1.1 200 OK\n");
+    client->print("Content-Type:text/plain; version=0.0.4; charset=utf-8\n");
+    client->print("Connection: close\n");
+    client->print("\n");
+
+    client->print("uptime_ms ");
+    client->print(millis());
+    client->print("\n");
+
+    client->print(R"(particles_ug_m3{sensor="PMSA003",size="pm1.0"} )");
+    client->print(task_data->pmsx003_data->pm1);
+    client->print("\n");
+    client->print(R"(particles_ug_m3{sensor="PMSA003",size="pm2.5"} )");
+    client->print(task_data->pmsx003_data->pm25);
+    client->print("\n");
+    client->print(R"(particles_ug_m3{sensor="PMSA003",size="pm10.0"} )");
+    client->print(task_data->pmsx003_data->pm10);
+    client->print("\n");
+
+    int pm1aqi = usAQI(task_data->pmsx003_data->pm1);
+    int pm25aqi = usAQI(task_data->pmsx003_data->pm25);
+    int pm10aqi = usAQI(task_data->pmsx003_data->pm10);
+    client->print(R"(us_aqi{sensor="PMSA003",size="pm1.0"} )");
+    client->print(pm1aqi);
+    client->print("\n");
+    client->print(R"(us_aqi{sensor="PMSA003",size="pm2.5"} )");
+    client->print(pm25aqi);
+    client->print("\n");
+    client->print(R"(us_aqi{sensor="PMSA003",size="pm10.0"} )");
+    client->print(pm10aqi);
+    client->print("\n");
+
+    client->print(R"(co2_ppm{sensor="DS-CO2-20"} )");
+    client->print(task_data->dsco220_data->co2_ppm);
+    client->print("\n");
+
+    client->print(R"(co2_ppm{sensor="MH-Z19C"} )");
+    client->print(task_data->mhz19_data->co2_ppm);
+    client->print("\n");
+    client->print(R"(temp_c{sensor="MH-Z19C"} )");
+    client->print(task_data->mhz19_data->temp_c);
+    client->print("\n");
+
+    client->print(R"(temp_c{sensor="BME280"} )");
+    client->print(task_data->bme_data->temp_c);
+    client->print("\n");
+    client->print(R"(pressure_hpa{sensor="BME280"} )");
+    client->print(task_data->bme_data->pressurePa / 100.0);
+    client->print("\n");
+    client->print(R"(humidity_rel{sensor="BME280"} )");
+    client->print(task_data->bme_data->humidityPercent);
+    client->print("\n");
+
+    client->print("\n");
+    client->stop();
+}
+
 void TaskServeWeb(void* task_data_arg) {
     Serial.println("ServeWeb: Starting task...");
     TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
@@ -231,6 +290,20 @@ void TaskServeWeb(void* task_data_arg) {
             Serial.print(request);
             Serial.print("----\n");
 
+            if (request.startsWith("GET /favicon.ico ")) {
+                client.print("HTTP/1.1 404 Not Found\n");
+                client.print("Connection: close\n");
+                client.print("\n");
+                client.stop();
+                Serial.println("TaskServeWeb: /favicon.ico client finished");
+                continue;
+            }
+            if (request.startsWith("GET /varz ")) {
+                Serial.println("TaskServeWeb: /varz");
+                DoVarz(&client, task_data);
+                continue;
+            }
+
             int pm1aqi = usAQI(task_data->pmsx003_data->pm1);
             int pm25aqi = usAQI(task_data->pmsx003_data->pm25);
             int pm10aqi = usAQI(task_data->pmsx003_data->pm10);
@@ -240,8 +313,8 @@ void TaskServeWeb(void* task_data_arg) {
 
             int maxAqi = max(max(pm1aqi, pm25aqi), pm10aqi);
 
-            client.print("HTTP/1.2 200 OK\n");
-            client.print("Content-type:text/html charset=utf-8\n");
+            client.print("HTTP/1.1 200 OK\n");
+            client.print("Content-Type:text/html charset=utf-8\n");
             client.print("Connection: close\n");
             client.print("\n");
 
