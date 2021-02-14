@@ -243,8 +243,9 @@ void setup()
     pixels.setPixelColor(0, pixels.Color(0, 0 , 0));
     pixels.show();
 
-    Serial.println("Setting up WiFi...");
-    net_manager::Connect(/*timeout_ms=*/ 60000);
+    // Serial.println("Setting up WiFi...");
+    // net_manager::Setup();
+    // net_manager::Connect(/*timeout_ms=*/ 60000);
 
     Serial.println("Setting up PMSx003 Serial port...");
     pms_serial.begin(9600, SERIAL_8N1, /*rx=*/ PMSX003_RX_PIN, /*tx=*/ PMSX003_TX_PIN);
@@ -322,15 +323,6 @@ void setup()
         /*param=*/ &dsco220_task_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
-#if 0
-    xTaskCreate(
-        pollDsCo2Serial,
-        "pollDsCo2Serial",
-        /*stack_size=*/ 10000,
-        /*param=*/ &mhz19_serial,
-        /*priority=*/ next_priority++,
-        /*handle=*/ nullptr);
-#endif
     xTaskCreate(
         PollBme,
         "pollBme",
@@ -351,15 +343,6 @@ void setup()
         /*param=*/ &ui_task_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
-
-    xTaskCreate(
-        net_manager::DoTask,
-        "NetManager",
-        /*stack_size=*/ 4*1024,
-        /*param=*/ nullptr,
-        /*priority=*/ next_priority++,
-        /*handle=*/ nullptr);
-
     xTaskCreate(
         sensor_community::TaskSensorCommunity,
         "TaskSensorCommunity",
@@ -374,18 +357,14 @@ void setup()
         /*param=*/ &ui_task_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
-#if 0
     xTaskCreate(
-        ui::TaskStrobePixels,
-        "TaskStrobePixels",
-        /*stack_size=*/ 1*1024,
-        /*param=*/ &pixels,
+        net_manager::DoTask,
+        "NetManager",
+        /*stack_size=*/ 4*1024,
+        /*param=*/ nullptr,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
-#endif
 
-    Serial.print("WiFi status: ");
-    Serial.println(WiFi.status());
     Serial.print("setup(): core: ");
     Serial.println(xPortGetCoreID());
     Serial.println("Setup done");
@@ -394,6 +373,7 @@ void setup()
 // Don't do anything in loop() so Arduino can do its stuff without delay.
 unsigned long last_print_time_ms = 0;
 void loop() {
+    delay(10);  // delay so idle task can feed watchdog
     if ((millis() - last_print_time_ms) < 1 * 60 * 1000 && last_print_time_ms) {
         return;
     }

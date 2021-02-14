@@ -1,6 +1,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
+#include <stdint.h>
 #include <Adafruit_NeoPixel.h>
 
 #include "bme280.h"
