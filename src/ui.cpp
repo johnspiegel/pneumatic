@@ -172,55 +172,71 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
     client->print("Connection: close\n");
     client->print("\n");
 
-    client->print("uptime_ms ");
-    client->print(millis());
-    client->print("\n");
+    String mac = WiFi.macAddress();
+    // mac.replace(":", "");
+    mac.toLowerCase();
+    String ip = WiFi.localIP().toString();
+    const char* host = WiFi.getHostname();
+    auto MetricLine = [&](const char* name, const char* fields, String value) {
+        String line = R"({name}{mac_address="{mac}",ip_address="{ip}",hostname="{host}",{fields}} {value})";
+        line.replace("{name}", name);
+        line.replace("{mac}", mac);
+        line.replace("{ip}", ip);
+        line.replace("{host}", host);
+        line.replace("{fields}", fields);
+        line.replace("{value}", String(value));
+        line += '\n';
+        return line;
+    };
+    auto MetricLineInt = [&](const char* name, const char* fields, long value) {
+        return MetricLine(name, fields, String(value));
+    };
+    auto MetricLineUint = [&](const char* name, const char* fields, unsigned long value) {
+        return MetricLine(name, fields, String(value));
+    };
+    auto MetricLineDouble = [&](const char* name, const char* fields, double value) {
+        return MetricLine(name, fields, String(value));
+    };
 
-    client->print(R"(particles_ug_m3{sensor="PMSA003",size="pm1.0"} )");
-    client->print(task_data->pmsx003_data->pm1);
-    client->print("\n");
-    client->print(R"(particles_ug_m3{sensor="PMSA003",size="pm2.5"} )");
-    client->print(task_data->pmsx003_data->pm25);
-    client->print("\n");
-    client->print(R"(particles_ug_m3{sensor="PMSA003",size="pm10.0"} )");
-    client->print(task_data->pmsx003_data->pm10);
-    client->print("\n");
+    client->print(MetricLineUint("uptime_ms", "", millis()));
+
+    String wifi_fields = R"(ssid="{ssid}",bssid="{bssid}",channel="{channel}")";
+    wifi_fields.replace("{ssid}", WiFi.SSID());
+    String bssid = WiFi.BSSIDstr();
+    bssid.toLowerCase();
+    wifi_fields.replace("{bssid}", bssid);
+    wifi_fields.replace("{channel}", String(WiFi.channel()));
+    client->print(MetricLineInt("wifi_rssi", wifi_fields.c_str(), WiFi.RSSI()));
+    client->print(MetricLineInt("wifi_txpower", wifi_fields.c_str(), WiFi.getTxPower()));
+
+    client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm1.0")",
+                                task_data->pmsx003_data->pm1));
+    client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm2.5")",
+                                task_data->pmsx003_data->pm25));
+    client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm10.0")",
+                                task_data->pmsx003_data->pm10));
 
     int pm1aqi = usAQI(task_data->pmsx003_data->pm1);
     int pm25aqi = usAQI(task_data->pmsx003_data->pm25);
     int pm10aqi = usAQI(task_data->pmsx003_data->pm10);
-    client->print(R"(us_aqi{sensor="PMSA003",size="pm1.0"} )");
-    client->print(pm1aqi);
-    client->print("\n");
-    client->print(R"(us_aqi{sensor="PMSA003",size="pm2.5"} )");
-    client->print(pm25aqi);
-    client->print("\n");
-    client->print(R"(us_aqi{sensor="PMSA003",size="pm10.0"} )");
-    client->print(pm10aqi);
-    client->print("\n");
+    client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm1.0")", pm1aqi));
+    client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm2.5")", pm25aqi));
+    client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm10.0")", pm10aqi));
 
-    client->print(R"(co2_ppm{sensor="DS-CO2-20"} )");
-    client->print(task_data->dsco220_data->co2_ppm);
-    client->print("\n");
+    client->print(MetricLineInt("co2_ppm", R"(sensor="DS-CO2-20")", 
+                                task_data->dsco220_data->co2_ppm));
 
-    client->print(R"(co2_ppm{sensor="MH-Z19C"} )");
-    client->print(task_data->mhz19_data->co2_ppm);
-    client->print("\n");
-    client->print(R"(temp_c{sensor="MH-Z19C"} )");
-    client->print(task_data->mhz19_data->temp_c);
-    client->print("\n");
+    client->print(MetricLineInt("co2_ppm", R"(sensor="MH-Z19C")", 
+                                task_data->mhz19_data->co2_ppm));
+    client->print(MetricLineInt("temp_c", R"(sensor="MH-Z19C")", 
+                                task_data->mhz19_data->temp_c));
 
-    client->print(R"(temp_c{sensor="BME280"} )");
-    client->print(task_data->bme_data->temp_c);
-    client->print("\n");
-    client->print(R"(pressure_hpa{sensor="BME280"} )");
-    client->print(task_data->bme_data->pressurePa / 100.0);
-    client->print("\n");
-    client->print(R"(humidity_rel{sensor="BME280"} )");
-    client->print(task_data->bme_data->humidityPercent);
-    client->print("\n");
-
-    client->print("\n");
+    client->print(MetricLineDouble("temp_c", R"(sensor="BME280")", 
+                                task_data->bme_data->temp_c));
+    client->print(MetricLineDouble("pressure_pa", R"(sensor="BME280")", 
+                                task_data->bme_data->pressurePa));
+    client->print(MetricLineDouble("humidity_percent", R"(sensor="BME280")", 
+                                task_data->bme_data->humidityPercent));
     client->stop();
 }
 

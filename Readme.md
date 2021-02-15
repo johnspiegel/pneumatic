@@ -1,8 +1,6 @@
 TODO:
     * Hygiene:
-        * Don't keep adding duplicate wifi event callbacks
         * Render time to web page, Wifi info, RSSI, channel, etc., number of wifi disconnects
-        * Upload to sensor.community
         * Periodic background scan for better wifi channel
         * Two colored LED lights - one for Co2, one for AQI
         * clean up wifi code
@@ -11,6 +9,7 @@ TODO:
         * Pin tasks to cores, and use real task priorities
         * Check for errrors from task creates
         * refactor to do AQI classes as a list of structs.
+        * Thread safety - use proper mutexes to guard shared data.
 
     * other integrations:
         * local influxdb
