@@ -25,8 +25,12 @@
 #endif
 
 #define WS2812B_PIN 25
-#define PMSX003_RX_PIN 16
-#define PMSX003_TX_PIN 17
+// NodeMCU 32-s
+// #define PMSX003_RX_PIN 16
+// #define PMSX003_TX_PIN 17
+// TTGO T-Display
+#define PMSX003_RX_PIN 26
+#define PMSX003_TX_PIN 27
 #define MHZ19_RX_PIN 33
 #define MHZ19_TX_PIN 32
 #define BME280_I2C_ADDRESS 0x76
