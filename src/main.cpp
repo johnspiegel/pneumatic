@@ -1,5 +1,3 @@
-/**
- */
 #include <Adafruit_BME280.h>
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
@@ -31,97 +29,58 @@
 #define PMSX003_TX_PIN 17
 #define MHZ19_RX_PIN 33
 #define MHZ19_TX_PIN 32
+#define BME280_I2C_ADDRESS 0x76
+// TODO: acutallu use ds-co2-20 address
+#define DSCO220_I2C_ADDRESS 0x08
 
 SemaphoreHandle_t i2c_mutex = nullptr;
 
-HardwareSerial mhz19_serial(1);
 HardwareSerial pms_serial(2);
-Adafruit_BME280 bme;
-
 pmsx003::TaskData pmsx003_data = {0};
+
+HardwareSerial mhz19_serial(1);
 mhz19::TaskData mhz19_data = {0};
+
+Adafruit_BME280 bme;
+bme280::Data bme280_data = {0};
 
 dsco220::Data dsco220_data = {0};
 dsco220::TaskData dsco220_task_data = {0};
 
 ui::TaskData ui_task_data = {0};
-
 Adafruit_NeoPixel pixels(/*num_pixels=*/1, /*pin=*/ WS2812B_PIN,  NEO_GRB + NEO_KHZ800);
 
-bme280::Data bme_data = {0};
-
-void PollBme(void* unused) {
-    unsigned long last_print_time_ms = 0;
-    for (;;) {
-        if (xSemaphoreTake(i2c_mutex, 1000 / portTICK_PERIOD_MS) == pdTRUE) {
-            bme_data.temp_c = bme.readTemperature();
-            bme_data.pressurePa = bme.readPressure();
-            bme_data.humidityPercent = bme.readHumidity();
-            xSemaphoreGive(i2c_mutex);
-        } else {
-            Serial.print("ERROR: BME280 failed to acquire i2c mutex\n");
-            continue;
-        }
-
-        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
-            delay(1000);
-            continue;
-        }
-        last_print_time_ms = millis();
-
-        Serial.print("PollBme(): core: ");
-        Serial.println(xPortGetCoreID());
-        Serial.print("BME280");
-        Serial.print("  Temp: ");
-        Serial.print(bme_data.temp_c);
-        Serial.print(" °C ");
-        Serial.print(ui::CToF(bme_data.temp_c));
-        Serial.print(" °F");
-        Serial.print("  Pressure: ");
-        Serial.print(bme_data.pressurePa / 100.0);
-        Serial.print(" hPa");
-        Serial.print("  Humidity: ");
-        Serial.print(bme_data.humidityPercent);
-        Serial.print("%\n");
-
-        delay(1000);
-    }
-
-    vTaskDelete(NULL);
-}
-
 void i2cScan() {
-  byte error, address;
-  int nDevices;
-  Serial.println("Scanning...");
-  nDevices = 0;
-  for(address = 1; address < 127; address++ ) {
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-    if (error == 0) {
-      Serial.print("I2C device found at address 0x");
-      if (address<16) {
-        Serial.print("0");
-      }
-      Serial.println(address,HEX);
-      nDevices++;
+    byte error, address;
+    int nDevices;
+    Serial.println("Scanning...");
+    nDevices = 0;
+    for(address = 1; address < 127; address++ ) {
+        Wire.beginTransmission(address);
+        error = Wire.endTransmission();
+        if (error == 0) {
+            Serial.print("I2C device found at address 0x");
+            if (address<16) {
+                Serial.print("0");
+            }
+            Serial.println(address,HEX);
+            nDevices++;
+        }
+        else if (error==4) {
+            Serial.print("Unknown error at address 0x");
+            if (address<16) {
+                Serial.print("0");
+            }
+            Serial.println(address,HEX);
+        }
     }
-    else if (error==4) {
-      Serial.print("Unknown error at address 0x");
-      if (address<16) {
-        Serial.print("0");
-      }
-      Serial.println(address,HEX);
+    if (nDevices == 0) {
+        Serial.println("No I2C devices found\n");
     }
-  }
-  if (nDevices == 0) {
-    Serial.println("No I2C devices found\n");
-  }
-  else {
-    Serial.println("done\n");
-  }
+    else {
+        Serial.println("done\n");
+    }
 }
-
 
 void setup()
 {
@@ -187,7 +146,7 @@ void setup()
     dsco220_task_data.i2c = &Wire;
     dsco220_task_data.data = &dsco220_data;
 
-    if (!bme.begin(0x76)) {
+    if (!bme.begin(BME280_I2C_ADDRESS)) {
         Serial.print("ERROR: no BME280 found\n");
     } else {
         Serial.println("BME280 initialized.");
@@ -195,6 +154,8 @@ void setup()
     bme.getTemperatureSensor()->printSensorDetails();
     bme.getPressureSensor()->printSensorDetails();
     bme.getHumiditySensor()->printSensorDetails();
+    bme280_data.i2c_mutex = i2c_mutex;
+    bme280_data.bme280 = &bme;
 
     // Apparently ESP32 FreeRTOS can't elegantly handle different tasks at the
     // same priority without the possibility of starvation. 
@@ -221,17 +182,17 @@ void setup()
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
     xTaskCreate(
-        PollBme,
+        bme280::TaskPoll,
         "bme280",
         /*stack_size=*/ 10000,
-        /*param=*/ nullptr,
+        /*param=*/ &bme280_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
 
     ui_task_data.pmsx003_data = &pmsx003_data;
     ui_task_data.mhz19_data = &mhz19_data;
     ui_task_data.dsco220_data = &dsco220_data;
-    ui_task_data.bme_data = &bme_data;
+    ui_task_data.bme280_data = &bme280_data;
     ui_task_data.pixels = &pixels;
     xTaskCreate(
         ui::TaskDoPixels,

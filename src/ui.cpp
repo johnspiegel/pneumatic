@@ -232,11 +232,11 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
                                 task_data->mhz19_data->temp_c));
 
     client->print(MetricLineDouble("temp_c", R"(sensor="BME280")", 
-                                task_data->bme_data->temp_c));
+                                task_data->bme280_data->temp_c));
     client->print(MetricLineDouble("pressure_pa", R"(sensor="BME280")", 
-                                task_data->bme_data->pressurePa));
+                                task_data->bme280_data->pressurePa));
     client->print(MetricLineDouble("humidity_percent", R"(sensor="BME280")", 
-                                task_data->bme_data->humidityPercent));
+                                task_data->bme280_data->humidityPercent));
     client->stop();
 }
 
@@ -357,10 +357,10 @@ void TaskServeWeb(void* task_data_arg) {
                 co2Class(task_data->dsco220_data->co2_ppm),
                 task_data->dsco220_data->co2_ppm,
                 // Temp/Humidity/Pressure
-                task_data->bme_data->temp_c,
-                CToF(task_data->bme_data->temp_c),
-                task_data->bme_data->humidityPercent,
-                task_data->bme_data->pressurePa / 100.0,
+                task_data->bme280_data->temp_c,
+                CToF(task_data->bme280_data->temp_c),
+                task_data->bme280_data->humidityPercent,
+                task_data->bme280_data->pressurePa / 100.0,
 
                 // Bottom details
                 MillisHumanReadable(millis()).c_str(),
@@ -374,10 +374,10 @@ void TaskServeWeb(void* task_data_arg) {
                 task_data->mhz19_data->temp_c,
                 CToF(task_data->mhz19_data->temp_c),
                 task_data->dsco220_data->co2_ppm,
-                task_data->bme_data->temp_c,
-                CToF(task_data->bme_data->temp_c),
-                task_data->bme_data->pressurePa,
-                task_data->bme_data->humidityPercent
+                task_data->bme280_data->temp_c,
+                CToF(task_data->bme280_data->temp_c),
+                task_data->bme280_data->pressurePa,
+                task_data->bme280_data->humidityPercent
             );
             client.print(buf);
 
