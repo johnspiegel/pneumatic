@@ -16,8 +16,8 @@ bool Push(const ui::TaskData* data) {
     macAddress.replace(":", "");
     macAddress.toLowerCase();
 
-    Serial.print("sensor-id: esp32-");
-    Serial.println(macAddress);
+    // Serial.print("sensor-id: esp32-");
+    // Serial.println(macAddress);
 
     http_client.setReuse(false);
     http_client.setConnectTimeout(20000);
@@ -38,8 +38,8 @@ bool Push(const ui::TaskData* data) {
     payload.replace("{pm2_5}", String(data->pmsx003_data->pm25));
     payload.replace("{pm10_0}", String(data->pmsx003_data->pm10));
 
-    Serial.print("SensorCommunity: Payload:\n");
-    Serial.print(payload);
+    // Serial.print("SensorCommunity: Payload:\n");
+    // Serial.print(payload);
 
     if (!http_client.begin(wifi_client, "api.sensor.community", 80,
                            "/v1/push-sensor-data/", /*https=*/ false)) {
@@ -52,9 +52,9 @@ bool Push(const ui::TaskData* data) {
     http_client.addHeader("X-PIN", "1");  // PMSX003
     int err = http_client.POST(payload);
     if (err >= HTTP_CODE_OK && err <= HTTP_CODE_ALREADY_REPORTED) {
-        Serial.print("SensorCommunity: Data pushed: ");
-        Serial.println(err);
-        Serial.println(http_client.getString());
+        // Serial.print("SensorCommunity: Data pushed: ");
+        // Serial.println(err);
+        // Serial.println(http_client.getString());
     } else {
         Serial.print("ERROR: SensorCommunity: http return: ");
         Serial.println(err);
@@ -76,8 +76,8 @@ bool Push(const ui::TaskData* data) {
     payload.replace("{humidity}", String(data->bme280_data->humidityPercent));
     payload.replace("{pressure}", String(data->bme280_data->pressurePa));
 
-    Serial.print("SensorCommunity: Payload:\n");
-    Serial.print(payload);
+    // Serial.print("SensorCommunity: Payload:\n");
+    // Serial.print(payload);
 
     if (!http_client.begin(wifi_client, "api.sensor.community", 80,
                            "/v1/push-sensor-data/", /*https=*/ false)) {
@@ -90,9 +90,9 @@ bool Push(const ui::TaskData* data) {
     http_client.addHeader("X-PIN", "11");  // BME280
     err = http_client.POST(payload);
     if (err >= HTTP_CODE_OK && err <= HTTP_CODE_ALREADY_REPORTED) {
-        Serial.print("SensorCommunity: Data pushed: ");
-        Serial.println(err);
-        Serial.println(http_client.getString());
+        // Serial.print("SensorCommunity: Data pushed: ");
+        // Serial.println(err);
+        // Serial.println(http_client.getString());
     } else {
         Serial.print("ERROR: SensorCommunity: http return: ");
         Serial.println(err);
@@ -114,7 +114,9 @@ void TaskSensorCommunity(void* task_param) {
         Serial.print("TaskSensorCommunity(): core: ");
         Serial.println(xPortGetCoreID());
         Serial.print("SensorCommunity: Pushing data...\n");
-        Push(ui_task_data);
+        if (Push(ui_task_data)) {
+            Serial.print("SensorCommunity: success\n");
+        }
         Serial.print("SensorCommunity: waiting for 2m25s...\n");
         delay(145000);
     }

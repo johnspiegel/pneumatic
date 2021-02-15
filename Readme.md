@@ -2,7 +2,6 @@ TODO:
     * Hygiene:
         * Two colored LED lights - one for Co2, one for AQI
         * clean up wifi code
-        * Reorganize Code - move bme stuff to separate files, set up task poll functions
         * Add tests
         * Pin tasks to cores, and use real task priorities
         * Check for errrors from task creates
@@ -10,7 +9,7 @@ TODO:
         * Thread safety - use proper mutexes to guard shared data.
 
     * other integrations:
-        * local influxdb
+        * push to influxdb
         * Chillibits ?
         * opensensemap ?
         * weather underground?
