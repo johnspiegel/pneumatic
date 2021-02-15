@@ -39,7 +39,7 @@ HardwareSerial pms_serial(2);
 Adafruit_BME280 bme;
 
 pmsx003::TaskData pmsx003_data = {0};
-mhz19::Data mhz19_data = {0};
+mhz19::TaskData mhz19_data = {0};
 
 dsco220::Data dsco220_data = {0};
 dsco220::TaskData dsco220_task_data = {0};
@@ -47,48 +47,6 @@ dsco220::TaskData dsco220_task_data = {0};
 ui::TaskData ui_task_data = {0};
 
 Adafruit_NeoPixel pixels(/*num_pixels=*/1, /*pin=*/ WS2812B_PIN,  NEO_GRB + NEO_KHZ800);
-
-void PollMhz19(void* unused) {
-    unsigned long last_print_time_ms = 0;
-    for (;;) {
-        if (!mhz19::Read(&mhz19_serial, &mhz19_data, /*timeout_ms=*/ 5000)) {
-            Serial.print("ERROR: failed to read MHZ-19c sensor");
-            delay(1000);
-            continue;
-        }
-
-        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
-            delay(2000);
-            continue;
-        }
-        last_print_time_ms = millis();
-
-
-        Serial.print("PollMhz19(): core: ");
-        Serial.println(xPortGetCoreID());
-        Serial.print("MH-Z19c Results: ");
-        /*
-        long now_ms = millis();
-        if (last_read_time_ms != -1) {
-            Serial.print("  [Elapsed: ");
-            Serial.print(now_ms - last_read_time_ms);
-            Serial.print(" ms]\n");
-        }
-        last_read_time_ms = now_ms;
-        */
-        Serial.print("  CO2: ");
-        Serial.print(mhz19_data.co2_ppm);
-        Serial.print("ppm");
-        Serial.print("  Temp: ");
-        Serial.print(mhz19_data.temp_c);
-        Serial.print(" °C ");
-        Serial.print(ui::CToF(mhz19_data.temp_c));
-        Serial.print(" °F\n");
-        delay(2000);
-    }
-
-    vTaskDelete(NULL);
-}
 
 bme280::Data bme_data = {0};
 
@@ -218,6 +176,7 @@ void setup()
         delay(100);
     }
     Serial.println("MH-Z19 Serial online");
+    mhz19_data.serial = &mhz19_serial;
     mhz19::SetAutoBackgroundCalibration(&mhz19_serial, /*abc_on=*/ true);
 
     Serial.println("Setting up Plantower DS CO2..");
@@ -227,15 +186,6 @@ void setup()
     dsco220_task_data.i2c_mutex = i2c_mutex;
     dsco220_task_data.i2c = &Wire;
     dsco220_task_data.data = &dsco220_data;
-#if 0
-    Serial.println("Setting up DS-CO2-20 Serial port...");
-    mhz19_serial.begin(9600, SERIAL_8N1, /*rx=*/21, /*tx=*/22);
-    while(!mhz19_serial)
-        Serial.println("    ...");
-        delay(100);
-        ;
-    Serial.println("DS-CO2-20 Serial online");
-#endif
 
     if (!bme.begin(0x76)) {
         Serial.print("ERROR: no BME280 found\n");
@@ -257,10 +207,10 @@ void setup()
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
     xTaskCreate(
-        PollMhz19,
+        mhz19::TaskPoll,
         "PollMhz19",
         /*stack_size=*/ 10000,
-        /*param=*/ nullptr,
+        /*param=*/ &mhz19_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
     xTaskCreate(
