@@ -58,24 +58,111 @@ float calcAQI(int val, int concL, int concH, int aqiL, int aqiH) {
     return aqiL + float(val - concL) * (aqiH - aqiL)/(concH - concL);
 }
 
-// TODO: fix this - the thresholds are all different for the different sizes!
-float usAQI(int val) {
-    if (val > 350) {
-        return calcAQI(val, 351, 500, 401, 500);
-    } else if (val > 250) {
-        return calcAQI(val, 251, 350, 301, 400);
-    } else if (val > 150) {
-        return calcAQI(val, 151, 250, 201, 300);
-    } else if (val > 50) {
-        return calcAQI(val, 51, 150, 151, 200);
-    } else if (val > 35) {
-        return calcAQI(val, 36, 50, 101, 150);
-    } else if (val > 12) {
-        return calcAQI(val, 13, 35, 51, 100);
-    } else if (val >= 0) {
-        return calcAQI(val, 0, 12, 0, 50);
+struct AqiLevel {
+    const char* tag;
+    int16_t high_conc;
+    int16_t high_aqi;
+};
+
+// PM1.0 aqi isn't really defined!
+const std::initializer_list<AqiLevel> aqi_pm2_5 = {
+    {
+        .tag = "good",
+        .high_conc = 12,
+        .high_aqi = 50,
+    },
+    {
+        .tag = "moderate",
+        .high_conc = 35,
+        .high_aqi = 100,
+    },
+    {
+        .tag = "unhealthy-for-sensitive-groups",
+        .high_conc = 55,
+        .high_aqi = 150,
+    },
+    {
+        .tag = "unhealthy",
+        .high_conc = 150,
+        .high_aqi = 200,
+    },
+    {
+        .tag = "very-unhealthy",
+        .high_conc = 250,
+        .high_aqi = 300,
+    },
+    {
+        .tag = "hazardous",
+        .high_conc = 350,
+        .high_aqi = 400,
+    },
+    {
+        .tag = "hazardous",
+        .high_conc = 500,
+        .high_aqi = 500,
+    },
+};
+const std::initializer_list<AqiLevel> aqi_pm10_0 = {
+    {
+        .tag = "good",
+        .high_conc = 55,
+        .high_aqi = 50,
+    },
+    {
+        .tag = "moderate",
+        .high_conc = 155,
+        .high_aqi = 100,
+    },
+    {
+        .tag = "unhealthy-for-sensitive-groups",
+        .high_conc = 255,
+        .high_aqi = 150,
+    },
+    {
+        .tag = "unhealthy",
+        .high_conc = 355,
+        .high_aqi = 200,
+    },
+    {
+        .tag = "very-unhealthy",
+        .high_conc = 425,
+        .high_aqi = 300,
+    },
+    {
+        .tag = "hazardous",
+        .high_conc = 505,
+        .high_aqi = 400,
+    },
+    {
+        .tag = "hazardous",
+        .high_conc = 604,
+        .high_aqi = 500,
+    },
+};
+
+float Aqi(const std::initializer_list<AqiLevel>& aqi_levels, float conc) {
+    int low_conc = 0 , high_conc = 0, low_aqi = 0, high_aqi = 0;
+    int max_conc = (aqi_levels.end()-1)->high_conc;
+    for (const auto& aqi_level : aqi_levels) {
+        if (conc <= aqi_level.high_conc || aqi_level.high_conc == max_conc) {
+            high_conc = aqi_level.high_conc;
+            high_aqi = aqi_level.high_aqi;
+            break;
+        }
+        low_conc = aqi_level.high_conc;
+        low_aqi = aqi_level.high_aqi;
     }
-    return -1.0;
+    return low_aqi + float(high_aqi - low_aqi) / float(high_conc - low_conc) * (conc - low_conc);
+}
+
+const char* AqiClass(const std::initializer_list<AqiLevel>& aqi_levels, float conc) {
+    for (const auto& aqi_level : aqi_levels) {
+        if (conc <= aqi_level.high_conc) {
+            return aqi_level.tag;
+        }
+    }
+    // Off the charts!
+    return (aqi_levels.end()-1)->tag;
 }
 
 const char* aqiClass(int aqi) {
@@ -216,9 +303,10 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
     client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm10.0")",
                                 task_data->pmsx003_data->pm10));
 
-    int pm1aqi = usAQI(task_data->pmsx003_data->pm1);
-    int pm25aqi = usAQI(task_data->pmsx003_data->pm25);
-    int pm10aqi = usAQI(task_data->pmsx003_data->pm10);
+    // PM1.0 AQI is not a thing!
+    int pm1aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm1));
+    int pm25aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm25));
+    int pm10aqi = std::round(Aqi(aqi_pm10_0, task_data->pmsx003_data->pm10));
     client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm1.0")", pm1aqi));
     client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm2.5")", pm25aqi));
     client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm10.0")", pm10aqi));
@@ -321,14 +409,17 @@ void TaskServeWeb(void* task_data_arg) {
                 continue;
             }
 
-            int pm1aqi = usAQI(task_data->pmsx003_data->pm1);
-            int pm25aqi = usAQI(task_data->pmsx003_data->pm25);
-            int pm10aqi = usAQI(task_data->pmsx003_data->pm10);
-            // pm1aqi = random(0,600);
-            // pm25aqi = random(0,600);
-            // pm10aqi = random(0,600);
+            // PM1.0 AQI is not a thing!
+            int pm1aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm1));
+            int pm25aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm25));
+            int pm10aqi = std::round(Aqi(aqi_pm10_0, task_data->pmsx003_data->pm10));
 
-            int maxAqi = max(max(pm1aqi, pm25aqi), pm10aqi);
+            int max_aqi = pm25aqi;
+            const char* max_aqi_class = AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm25);
+            if (pm10aqi > pm25aqi) {
+                max_aqi = pm10aqi;
+                max_aqi_class = AqiClass(aqi_pm10_0, task_data->pmsx003_data->pm10);
+            }
 
             client.print("HTTP/1.1 200 OK\n");
             client.print("Content-Type:text/html charset=utf-8\n");
@@ -340,17 +431,18 @@ void TaskServeWeb(void* task_data_arg) {
             char buf[4*1024] = {0};
             snprintf(buf, sizeof(buf), indexTemplate,
                 // Overall AQI
-                aqiClass(maxAqi),
-                maxAqi,
-                aqiMessage(maxAqi),
+                max_aqi_class,
+                max_aqi,
+                aqiMessage(max_aqi),
                 // PM 1.0/2.5/10.0 AQI
-                aqiClass(pm1aqi),
+                // PM1.0 AQI is not a thing!
+                AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm1),
                 pm1aqi,
                 task_data->pmsx003_data->pm1,
-                aqiClass(pm25aqi),
+                AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm25),
                 pm25aqi,
                 task_data->pmsx003_data->pm25,
-                aqiClass(pm10aqi),
+                AqiClass(aqi_pm10_0, task_data->pmsx003_data->pm10),
                 pm10aqi,
                 task_data->pmsx003_data->pm10,
                 // CO2

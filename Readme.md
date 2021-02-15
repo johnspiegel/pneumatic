@@ -1,11 +1,11 @@
 TODO:
     * Hygiene:
+        * refactor to do AQI classes as a list of structs.
         * Two colored LED lights - one for Co2, one for AQI
         * clean up wifi code
         * Add tests
         * Pin tasks to cores, and use real task priorities
         * Check for errrors from task creates
-        * refactor to do AQI classes as a list of structs.
         * Thread safety - use proper mutexes to guard shared data.
 
     * other integrations:

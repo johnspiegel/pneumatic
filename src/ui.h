@@ -23,8 +23,6 @@ String MillisHumanReadable(unsigned long ms);
 
 float CToF(float temp_C);
 
-float usAQI(int val);
-
 const char* aqiClass(int aqi);
 
 const char* aqiMessage(int aqi);
