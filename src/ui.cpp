@@ -140,6 +140,9 @@ const std::initializer_list<AqiLevel> aqi_pm10_0 = {
     },
 };
 
+// TODO: truncate conc to 1 decimal place for PM2.5, integer for PM10.0
+// https://www.airnow.gov/aqi/aqi-calculator/
+// https://www.airnow.gov/sites/default/files/2020-05/aqi-technical-assistance-document-sept2018.pdf
 float Aqi(const std::initializer_list<AqiLevel>& aqi_levels, float conc) {
     int low_conc = 0 , high_conc = 0, low_aqi = 0, high_aqi = 0;
     int max_conc = (aqi_levels.end()-1)->high_conc;
