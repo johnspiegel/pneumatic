@@ -7,7 +7,9 @@
 
 namespace pmsx003 {
 
-struct PmsData {
+struct TaskData {
+    Stream* serial;
+
 	uint16_t pm1Raw;
 	uint16_t pm25Raw;
 	uint16_t pm10Raw;
@@ -26,7 +28,9 @@ struct PmsData {
 
 bool VerifyPacket(uint8_t* packet, int size);
 
-bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms=5000);
+bool Read(Stream* serial, TaskData* data, unsigned long timeout_ms=5000);
+
+void TaskPoll(void* task_data);
 
 } // namespace pmsx003
 

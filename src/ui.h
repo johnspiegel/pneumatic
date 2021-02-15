@@ -12,7 +12,7 @@
 namespace ui {
 
 struct TaskData {
-    pmsx003::PmsData*   pmsx003_data;
+    pmsx003::TaskData*  pmsx003_data;
     mhz19::Data*        mhz19_data;
     dsco220::Data*      dsco220_data;
     bme280::Data*       bme_data;

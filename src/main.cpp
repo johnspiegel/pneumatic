@@ -38,7 +38,7 @@ HardwareSerial mhz19_serial(1);
 HardwareSerial pms_serial(2);
 Adafruit_BME280 bme;
 
-pmsx003::PmsData pmsx003_data = {0};
+pmsx003::TaskData pmsx003_data = {0};
 mhz19::Data mhz19_data = {0};
 
 dsco220::Data dsco220_data = {0};
@@ -47,51 +47,6 @@ dsco220::TaskData dsco220_task_data = {0};
 ui::TaskData ui_task_data = {0};
 
 Adafruit_NeoPixel pixels(/*num_pixels=*/1, /*pin=*/ WS2812B_PIN,  NEO_GRB + NEO_KHZ800);
-
-void BlinkIt(void* unused) {
-    for (;;) {
-        // turn the LED on (HIGH is the voltage level)
-        digitalWrite(LED_BUILTIN, HIGH);
-        // wait for a second
-        delay(2000);
-        // turn the LED off by making the voltage LOW
-        digitalWrite(LED_BUILTIN, LOW);
-        // wait for a second
-        delay(100);
-    }
-
-    vTaskDelete(NULL);
-}
-
-void PollPmsx003(void* unused) {
-    unsigned long last_print_time_ms = 0;
-    for (;;) {
-        if (!pmsx003::Read(&pms_serial, &pmsx003_data, /*timeout_ms=*/ 5000)) {
-            Serial.print("ERROR: failed to read PMSX003 sensor");
-            delay(1000);
-            continue;
-        }
-
-        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
-            continue;
-        }
-        last_print_time_ms = millis();
-
-        Serial.print("PollPmsx003(): core: ");
-        Serial.println(xPortGetCoreID());
-
-        Serial.print("PMSx003 data:");
-        Serial.print("  [ug/m^3] PM1.0: ");
-        Serial.print(pmsx003_data.pm1);
-        Serial.print("  PM2.5: ");
-        Serial.print(pmsx003_data.pm25);
-        Serial.print("  PM10: ");
-        Serial.print(pmsx003_data.pm10);
-        Serial.println();
-    }
-
-    vTaskDelete(NULL);
-}
 
 void PollMhz19(void* unused) {
     unsigned long last_print_time_ms = 0;
@@ -253,6 +208,7 @@ void setup()
         Serial.println("    ...");
         delay(100);
     }
+    pmsx003_data.serial = &pms_serial;
     Serial.println("PMSx003 Serial online");
 
     Serial.println("Setting up MH-Z19 Serial port...");
@@ -293,20 +249,11 @@ void setup()
     // Apparently ESP32 FreeRTOS can't elegantly handle different tasks at the
     // same priority without the possibility of starvation. 
     int next_priority = 2;
-#if 0
     xTaskCreate(
-        BlinkIt,
-        "BlinkIt",
+        pmsx003::TaskPoll,
+        "pmsx003",
         /*stack_size=*/ 10000,
-        /*param=*/ nullptr,
-        /*priority=*/ next_priority++,
-        /*handle=*/ nullptr);
-#endif
-    xTaskCreate(
-        PollPmsx003,
-        "PollPmsx003",
-        /*stack_size=*/ 10000,
-        /*param=*/ nullptr,
+        /*param=*/ &pmsx003_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
     xTaskCreate(
@@ -318,14 +265,14 @@ void setup()
         /*handle=*/ nullptr);
     xTaskCreate(
         dsco220::TaskPollDsCo2,
-        "TaskPollDsCo2",
+        "dsco220",
         /*stack_size=*/ 10000,
         /*param=*/ &dsco220_task_data,
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
     xTaskCreate(
         PollBme,
-        "pollBme",
+        "bme280",
         /*stack_size=*/ 10000,
         /*param=*/ nullptr,
         /*priority=*/ next_priority++,

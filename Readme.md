@@ -1,7 +1,5 @@
 TODO:
     * Hygiene:
-        * Render time to web page, Wifi info, RSSI, channel, etc., number of wifi disconnects
-        * Periodic background scan for better wifi channel
         * Two colored LED lights - one for Co2, one for AQI
         * clean up wifi code
         * Reorganize Code - move bme stuff to separate files, set up task poll functions
@@ -31,6 +29,8 @@ TODO:
     * Reliable
         * watchdog
         * serial to webpage
+        * Render time to web page, Wifi info, RSSI, channel, etc., number of wifi disconnects
+        * Periodic background scan for better wifi channel
 
     * Gifts:
         * Captive Portal

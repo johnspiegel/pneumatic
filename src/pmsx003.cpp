@@ -1,10 +1,3 @@
-/**
- * Blink
- *
- * Turns on an LED on for one second,
- * then off for one second, repeatedly.
- */
-
 #include "pmsx003.h"
 
 #include "Arduino.h"
@@ -62,7 +55,7 @@ bool VerifyPacket(uint8_t* packet, int size) {
 	return true;
 }
 
-bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms) {
+bool Read(Stream* serial, TaskData* data, unsigned long timeout_ms) {
     unsigned long start_time_ms = millis();
 
     // Get to packet start byte
@@ -145,6 +138,37 @@ bool Read(Stream* serial, PmsData* data, unsigned long timeout_ms) {
 	*/
 
     return true;
+}
+
+void TaskPoll(void* task_param) {
+    auto* task_data = reinterpret_cast<TaskData*>(task_param);
+    unsigned long last_print_time_ms = 0;
+    for (;;) {
+        if (!pmsx003::Read(task_data->serial, task_data, /*timeout_ms=*/ 5000)) {
+            Serial.print("ERROR: failed to read PMSX003 sensor");
+            delay(1000);
+            continue;
+        }
+
+        if ((millis() - last_print_time_ms) < 10 * 60 * 1000 && last_print_time_ms) {
+            continue;
+        }
+        last_print_time_ms = millis();
+
+        Serial.print("PollPmsx003(): core: ");
+        Serial.println(xPortGetCoreID());
+
+        Serial.print("PMSx003 data:");
+        Serial.print("  [ug/m^3] PM1.0: ");
+        Serial.print(task_data->pm1);
+        Serial.print("  PM2.5: ");
+        Serial.print(task_data->pm25);
+        Serial.print("  PM10: ");
+        Serial.print(task_data->pm10);
+        Serial.println();
+    }
+
+    vTaskDelete(NULL);
 }
 
 } // namespace pmsx003

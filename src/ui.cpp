@@ -314,7 +314,8 @@ void TaskServeWeb(void* task_data_arg) {
                 Serial.println("TaskServeWeb: /favicon.ico client finished");
                 continue;
             }
-            if (request.startsWith("GET /varz ")) {
+            if (request.startsWith("GET /varz ")
+                || request.startsWith("GET /metrics ")) {
                 Serial.println("TaskServeWeb: /varz");
                 DoVarz(&client, task_data);
                 continue;
