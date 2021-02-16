@@ -3,10 +3,93 @@
 #include <Adafruit_Neopixel.h>
 #include <WiFi.h>
 #include <WiFiServer.h>
+#include <TFT_eSPI.h>
 
 #include "html.h"
 
+#define BUTTON_1     35
+#define BUTTON_2     0
+#define BUTTONS_MAP {BUTTON_1,BUTTON_2}
+
 namespace ui {
+
+// TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
+
+TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
+
+void InitTft(void) {
+  tft.init();
+
+  tft.fillScreen(TFT_BLACK);
+  
+  // Set "cursor" at top left corner of display (0,0) and select font 4
+  tft.setCursor(0, 0, 4);
+
+  // Set the font colour to be white with a black background
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+  // We can now plot text on screen using the "print" class
+  tft.println("Intialised default\n");
+  tft.println("White wtext");
+  
+  tft.setTextColor(TFT_RED, TFT_BLACK);
+  tft.println("Red rtext");
+  
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.println("Green gtext");
+  
+  tft.setTextColor(TFT_BLUE, TFT_BLACK);
+  tft.println("Blue btext");
+}
+
+void TaskTft() {
+
+  tft.invertDisplay( false ); // Where i is true or false
+ 
+  tft.fillScreen(TFT_BLACK);
+  
+  tft.setCursor(0, 0, 4);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.println("Invert OFF\n");
+
+  tft.println("White text");
+  
+  tft.setTextColor(TFT_RED, TFT_BLACK);
+  tft.println("Red text");
+  
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.println("Green text");
+  
+  tft.setTextColor(TFT_BLUE, TFT_BLACK);
+  tft.println("Blue text");
+
+  delay(5000);
+
+
+  // Binary inversion of colours
+  tft.invertDisplay( true ); // Where i is true or false
+ 
+  tft.fillScreen(TFT_BLACK);
+  
+  tft.setCursor(0, 0, 4);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.println("Invert ON\n");
+
+  tft.println("White text");
+  
+  tft.setTextColor(TFT_RED, TFT_BLACK);
+  tft.println("Red text");
+  
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.println("Green text");
+  
+  tft.setTextColor(TFT_BLUE, TFT_BLACK);
+  tft.println("Blue text");
+
+  delay(5000);
+}
 
 String MillisHumanReadable(unsigned long ms) {
     int days = ms / (24 * 60 * 60 * 1000);
@@ -332,6 +415,9 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
 }
 
 void TaskServeWeb(void* task_data_arg) {
+    InitTft();
+    delay(5000);
+    TaskTft();
     Serial.println("ServeWeb: Starting task...");
     TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
     WiFiServer server(/*port=*/ 80);

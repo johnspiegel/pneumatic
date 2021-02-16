@@ -19,6 +19,8 @@ struct TaskData {
     Adafruit_NeoPixel*  pixels;
 };
 
+void InitTft(void);
+
 String MillisHumanReadable(unsigned long ms);
 
 float CToF(float temp_C);
