@@ -31,6 +31,8 @@ const char* aqiMessage(int aqi);
 
 const char* co2Class(int co2_ppm);
 
+void TaskDisplay(void* task_data_arg);
+
 void TaskServeWeb(void* unused);
 
 void TaskDoPixels(void* unused);

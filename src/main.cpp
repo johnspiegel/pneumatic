@@ -215,6 +215,13 @@ void setup()
         /*priority=*/ next_priority++,
         /*handle=*/ nullptr);
     xTaskCreate(
+        ui::TaskDisplay,
+        "TasDisplay",
+        /*stack_size=*/ 16*1024,
+        /*param=*/ &ui_task_data,
+        /*priority=*/ next_priority++,
+        /*handle=*/ nullptr);
+    xTaskCreate(
         ui::TaskServeWeb,
         "TaskServeWeb",
         /*stack_size=*/ 16*1024,

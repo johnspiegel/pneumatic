@@ -414,10 +414,45 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
     client->stop();
 }
 
+void TaskDisplay(void* task_data_arg) {
+    TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
+    tft.init();
+
+    unsigned long last_print_time_ms = 0;
+    for (;;) {
+        // PM1.0 AQI is not a thing!
+        int pm1aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm1));
+        int pm25aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm25));
+        int pm10aqi = std::round(Aqi(aqi_pm10_0, task_data->pmsx003_data->pm10));
+
+        int max_aqi = pm25aqi;
+        const char* max_aqi_class = AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm25);
+        if (pm10aqi > pm25aqi) {
+            max_aqi = pm10aqi;
+            max_aqi_class = AqiClass(aqi_pm10_0, task_data->pmsx003_data->pm10);
+        }
+
+        tft.fillScreen(TFT_GREEN);
+        // Set "cursor" at top left corner of display (0,0) and select font 4
+        tft.setCursor(0, 0, 4);
+        // Black on green text.
+        tft.setTextColor(TFT_BLACK, TFT_GREEN);
+        tft.println(max_aqi);
+        tft.println(aqiMessage(max_aqi));
+        tft.println(max_aqi_class);
+        tft.print("CO2: ");
+        tft.print(task_data->dsco220_data->co2_ppm);
+        tft.print(" ppm\n");
+
+        delay(1000);
+    }
+    vTaskDelete(NULL);
+}
+
 void TaskServeWeb(void* task_data_arg) {
-    InitTft();
-    delay(5000);
-    TaskTft();
+    // InitTft();
+    // delay(5000);
+    // TaskTft();
     Serial.println("ServeWeb: Starting task...");
     TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
     WiFiServer server(/*port=*/ 80);
