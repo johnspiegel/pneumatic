@@ -13,9 +13,9 @@
 
 namespace ui {
 
-// TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
-
+namespace {
 TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
+}  // namespace
 
 void InitTft(void) {
   tft.init();
@@ -91,6 +91,51 @@ void TaskTft() {
   delay(5000);
 }
 
+String SecondsHumanReadable(unsigned long ms) {
+    int days = ms / (24 * 60 * 60 * 1000);
+    ms %= (24 * 60 * 60 * 1000);
+    int hours = ms / (60 * 60 * 1000);
+    ms %= (60 * 60 * 1000);
+    int minutes = ms / (60 * 1000);
+    ms %= (60 * 1000);
+    int seconds = ms / (1000);
+    ms %= (1000);
+    if (ms >= 5000) {
+      seconds += 1;
+    }
+
+    char buf[8] = {0};
+    String str;
+    if (days) {
+        snprintf(buf, sizeof(buf), "%dd", days);
+        str += buf;
+    }
+    if (hours) {
+        if (str.length()) {
+            snprintf(buf, sizeof(buf), "%02dh", hours);
+        } else {
+            snprintf(buf, sizeof(buf), "%dh", hours);
+        }
+        str += buf;
+    }
+    if (minutes) {
+        if (str.length()) {
+            snprintf(buf, sizeof(buf), "%02dm", minutes);
+        } else {
+            snprintf(buf, sizeof(buf), "%dm", minutes);
+        }
+        str += buf;
+    }
+    if (str.length()) {
+        snprintf(buf, sizeof(buf), "%02ds", seconds);
+    } else {
+        snprintf(buf, sizeof(buf), "%ds", seconds);
+    }
+    str += buf;
+
+    return str;
+}
+
 String MillisHumanReadable(unsigned long ms) {
     int days = ms / (24 * 60 * 60 * 1000);
     ms %= (24 * 60 * 60 * 1000);
@@ -141,168 +186,257 @@ float calcAQI(int val, int concL, int concH, int aqiL, int aqiH) {
     return aqiL + float(val - concL) * (aqiH - aqiL)/(concH - concL);
 }
 
+uint32_t FgColor(uint32_t bg_color) {
+  // range: 0-255000
+  int brightness = (bg_color >> 16) * 299 +
+                   ((bg_color >> 8) & 0xff) * 587 +
+                   (bg_color & 0xff) * 114;
+  return (brightness > 127500) ? 0x000000 : 0xffffff ;
+}
+
+struct AqiCategory {
+  const char* tag;
+  const char* message;
+
+  uint16_t low_aqi;
+  uint16_t high_aqi;
+  uint32_t color;  // official AQI colors
+  uint32_t web_color;
+  uint32_t led_color;
+};
+
+const std::initializer_list<AqiCategory> aqi_categories = {
+  {
+    .tag = "good",
+    .message = "Good 😀",
+    .low_aqi = 0,
+    .high_aqi = 50,
+    .color = 0x00e400,
+    .web_color = 0x68e143,
+    .led_color = 0x00ff00,
+  },
+  {
+    .tag = "moderate",
+    .message = "Moderate 😐",
+    .low_aqi = 51,
+    .high_aqi = 100,
+    .color = 0xffff00,
+    .web_color = 0xffff55,
+    .led_color = 0xffff00,
+  },
+  {
+    .tag = "unhealthy-for-sensitive-groups",
+    .message = "Unhealthy for sensitive groups 🙁",
+    .low_aqi = 101,
+    .high_aqi = 150,
+    .color = 0xff7e00,
+    .web_color = 0xef8533,
+    .led_color = 0xff6000,
+  },
+  {
+    .tag = "unhealthy",
+    .message = "Unhealthy 😷",
+    .low_aqi = 151,
+    .high_aqi = 200,
+    .color = 0xff0000,
+    .web_color = 0xea3324,
+    .led_color = 0xff0000,
+  },
+  {
+    .tag = "very-unhealthy",
+    .message = "Very Unhealthy 🤢",
+    .low_aqi = 201,
+    .high_aqi = 300,
+    .color = 0x8f3f97,
+    .web_color = 0x8c1a4b,
+    .led_color = 0xff0020,
+  },
+  {
+    .tag = "hazardous",
+    .message = "Hazardous 😵",
+    .low_aqi = 301,
+    .high_aqi = 400,
+    .color = 0x7e0023,
+    .web_color = 0x8c1a4b,
+    .led_color = 0xff0040,
+  },
+  {
+    // Note: Officially, this is still just "hazardous".
+    .tag = "very-hazardous",
+    .message = "Very Hazardous ☠️",
+    .low_aqi = 401,
+    .high_aqi = 500,
+    .color = 0x7e0023,
+    .web_color = 0x731425,
+    .led_color = 0xff0060,
+  },
+};
+
 struct AqiLevel {
-    const char* tag;
-    int16_t high_conc;
-    int16_t high_aqi;
+    float low_conc;
+    float high_conc;
 };
 
 // PM1.0 aqi isn't really defined!
 const std::initializer_list<AqiLevel> aqi_pm2_5 = {
-    {
-        .tag = "good",
-        .high_conc = 12,
-        .high_aqi = 50,
-    },
-    {
-        .tag = "moderate",
-        .high_conc = 35,
-        .high_aqi = 100,
-    },
-    {
-        .tag = "unhealthy-for-sensitive-groups",
-        .high_conc = 55,
-        .high_aqi = 150,
-    },
-    {
-        .tag = "unhealthy",
-        .high_conc = 150,
-        .high_aqi = 200,
-    },
-    {
-        .tag = "very-unhealthy",
-        .high_conc = 250,
-        .high_aqi = 300,
-    },
-    {
-        .tag = "hazardous",
-        .high_conc = 350,
-        .high_aqi = 400,
-    },
-    {
-        .tag = "hazardous",
-        .high_conc = 500,
-        .high_aqi = 500,
-    },
+  // good
+  {
+    .low_conc = 0.0,
+    .high_conc = 12.0,
+  },
+  // moderate
+  {
+    .low_conc = 12.1,
+    .high_conc = 35.4,
+  },
+  // unhealthy for sensitive groups
+  {
+    .low_conc = 35.5,
+    .high_conc = 55.4,
+  },
+  // unhealthy
+  {
+    .low_conc = 55.5,
+    .high_conc = 150.4,
+  },
+  // very unhealthy
+  {
+    .low_conc = 150.5,
+    .high_conc = 250.4,
+  },
+  // hazardous
+  {
+    .low_conc = 250.5,
+    .high_conc = 350.4,
+  },
+  {
+    .low_conc = 350.5,
+    .high_conc = 500.4,
+  },
 };
 const std::initializer_list<AqiLevel> aqi_pm10_0 = {
-    {
-        .tag = "good",
-        .high_conc = 55,
-        .high_aqi = 50,
-    },
-    {
-        .tag = "moderate",
-        .high_conc = 155,
-        .high_aqi = 100,
-    },
-    {
-        .tag = "unhealthy-for-sensitive-groups",
-        .high_conc = 255,
-        .high_aqi = 150,
-    },
-    {
-        .tag = "unhealthy",
-        .high_conc = 355,
-        .high_aqi = 200,
-    },
-    {
-        .tag = "very-unhealthy",
-        .high_conc = 425,
-        .high_aqi = 300,
-    },
-    {
-        .tag = "hazardous",
-        .high_conc = 505,
-        .high_aqi = 400,
-    },
-    {
-        .tag = "hazardous",
-        .high_conc = 604,
-        .high_aqi = 500,
-    },
+  // good
+  {
+    .low_conc = 0,
+    .high_conc = 54,
+  },
+  // moderate
+  {
+    .low_conc = 55,
+    .high_conc = 154,
+  },
+  // unhealthy for sensitive groups
+  {
+    .low_conc = 155,
+    .high_conc = 254,
+  },
+  // unhealthy
+  {
+    .low_conc = 255,
+    .high_conc = 354,
+  },
+  // very unhealthy
+  {
+    .low_conc = 355,
+    .high_conc = 424,
+  },
+  // hazardous
+  {
+    .low_conc = 425,
+    .high_conc = 504,
+  },
+  {
+    .low_conc = 505,
+    .high_conc = 604,
+  },
+};
+
+// CO2 aqi isn't a thing, just doing this for colors.
+const std::initializer_list<AqiLevel> aqi_co2 = {
+  // good, green
+  {
+    .low_conc = 0,
+    .high_conc = 700,
+  },
+  // moderate, yellow
+  {
+    .low_conc = 701,
+    .high_conc = 1000,
+  },
+  // unhealthy for sensitive groups, orange
+  {
+    .low_conc = 1001,
+    .high_conc = 1500,
+  },
+  // unhealthy, red
+  {
+    .low_conc = 1501,
+    .high_conc = 2000,
+  },
+  // very unhealthy, purple
+  {
+    .low_conc = 2001,
+    .high_conc = 3000,
+  },
+  // hazardous, maroon
+  {
+    .low_conc = 3001,
+    .high_conc = 4000,
+  },
+  {
+    .low_conc = 4001,
+    .high_conc = 5000,
+  },
 };
 
 // TODO: truncate conc to 1 decimal place for PM2.5, integer for PM10.0
 // https://www.airnow.gov/aqi/aqi-calculator/
 // https://www.airnow.gov/sites/default/files/2020-05/aqi-technical-assistance-document-sept2018.pdf
-float Aqi(const std::initializer_list<AqiLevel>& aqi_levels, float conc) {
-    int low_conc = 0 , high_conc = 0, low_aqi = 0, high_aqi = 0;
-    int max_conc = (aqi_levels.end()-1)->high_conc;
-    for (const auto& aqi_level : aqi_levels) {
-        if (conc <= aqi_level.high_conc || aqi_level.high_conc == max_conc) {
-            high_conc = aqi_level.high_conc;
-            high_aqi = aqi_level.high_aqi;
-            break;
-        }
-        low_conc = aqi_level.high_conc;
-        low_aqi = aqi_level.high_aqi;
+int Aqi(const std::initializer_list<AqiLevel>& aqi_levels, int truncate_decimals, float conc) {
+  for (int i = 0; i < truncate_decimals; ++i) {
+    conc *= 10;
+  }
+  conc = int(conc);  // truncate
+  for (int i = 0; i < truncate_decimals; ++i) {
+    conc /= 10;
+  }
+
+  auto p_level = aqi_levels.begin();
+  auto cat = aqi_categories.begin();
+  while (p_level + 1 < aqi_levels.end() && cat + 1 < aqi_categories.end()) {
+    if (conc <= p_level->high_conc) {
+      break;
     }
-    return low_aqi + float(high_aqi - low_aqi) / float(high_conc - low_conc) * (conc - low_conc);
+    p_level++;
+    cat++;
+  }
+
+  return std::round(
+      cat->low_aqi
+      + float(cat->high_aqi - cat->low_aqi) / float(p_level->high_conc - p_level->low_conc) * (conc - p_level->low_conc));
 }
 
-const char* AqiClass(const std::initializer_list<AqiLevel>& aqi_levels, float conc) {
-    for (const auto& aqi_level : aqi_levels) {
-        if (conc <= aqi_level.high_conc) {
-            return aqi_level.tag;
-        }
+const AqiCategory& GetAqiCategory(float aqi) {
+  const AqiCategory* c = nullptr;
+  for (const auto& cat : aqi_categories) {
+    c = &cat;
+    if (aqi <= cat.high_aqi) {
+      break;
     }
-    // Off the charts!
-    return (aqi_levels.end()-1)->tag;
+  }
+  return *c;
 }
 
-const char* aqiClass(int aqi) {
-    if (aqi < 50) {
-        return "good";
-    } else if (aqi < 100) {
-        return "moderate";
-    } else if (aqi < 150) {
-        return "unhealthy-for-sensitive-groups";
-    } else if (aqi < 200) {
-        return "unhealthy";
-    } else if (aqi < 300) {
-        return "very-unhealthy";
-    } else if (aqi < 400) {
-        return "hazardous";
-    } else {
-        return "very-hazardous";
-    }
+const char* AqiTag(float aqi) {
+  return GetAqiCategory(aqi).tag;
 }
 
-const char* aqiMessage(int aqi) {
-    if (aqi < 50) {
-        return "Good 😀";
-    } else if (aqi < 100) {
-        return "Moderate 😐";
-    } else if (aqi < 150) {
-        return "Unhealthy for sensitive groups 🙁";
-    } else if (aqi < 200) {
-        return "Unhealthy 😷";
-    } else if (aqi < 300) {
-        return "Very Unhealthy 🤢";
-    } else if (aqi < 400) {
-        return "Hazardous 😵";
-    } else {
-        return "Very Hazardous ☠️";
-    }
+const char* AqiMessage(int aqi) {
+  return GetAqiCategory(aqi).message;
 }
 
-const char* co2Class(int co2_ppm) {
-    if (co2_ppm < 700) {
-        return "good";
-    } else if (co2_ppm < 1000) {
-        return "moderate";
-    } else if (co2_ppm < 1500) {
-        return "unhealthy-for-sensitive-groups";
-    } else if (co2_ppm < 2000) {
-        return "unhealthy";
-    } else if (co2_ppm < 3000) {
-        return "very-unhealthy";
-    } else if (co2_ppm < 4000) {
-        return "hazardous";
-    } else {
-        return "very-hazardous";
-    }
+const char* Co2Tag(int co2_ppm) {
+  return GetAqiCategory(Aqi(aqi_co2, 0, co2_ppm)).tag;
 }
 
 int32_t co2Color(int co2_ppm) {
@@ -390,9 +524,9 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
                                 task_data->pmsx003_data->pm10));
 
     // PM1.0 AQI is not a thing!
-    int pm1aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm1));
-    int pm25aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm25));
-    int pm10aqi = std::round(Aqi(aqi_pm10_0, task_data->pmsx003_data->pm10));
+    int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm1);
+    int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
+    int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
     client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm1.0")", pm1aqi));
     client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm2.5")", pm25aqi));
     client->print(MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm10.0")", pm10aqi));
@@ -415,44 +549,51 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
 }
 
 void TaskDisplay(void* task_data_arg) {
-    TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
-    tft.init();
+  TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
+  tft.init();
 
-    unsigned long last_print_time_ms = 0;
-    for (;;) {
-        // PM1.0 AQI is not a thing!
-        int pm1aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm1));
-        int pm25aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm25));
-        int pm10aqi = std::round(Aqi(aqi_pm10_0, task_data->pmsx003_data->pm10));
+  unsigned long last_print_time_ms = 0;
+  for (;;delay(1000)) {
+    int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
+    int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
 
-        int max_aqi = pm25aqi;
-        const char* max_aqi_class = AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm25);
-        if (pm10aqi > pm25aqi) {
-            max_aqi = pm10aqi;
-            max_aqi_class = AqiClass(aqi_pm10_0, task_data->pmsx003_data->pm10);
-        }
-
-        tft.fillScreen(TFT_GREEN);
-        // Set "cursor" at top left corner of display (0,0) and select font 4
-        tft.setCursor(0, 0, 4);
-        // Black on green text.
-        tft.setTextColor(TFT_BLACK, TFT_GREEN);
-        tft.println(max_aqi);
-        tft.println(aqiMessage(max_aqi));
-        tft.println(max_aqi_class);
-        tft.print("CO2: ");
-        tft.print(task_data->dsco220_data->co2_ppm);
-        tft.print(" ppm\n");
-
-        delay(1000);
+    int max_aqi = pm25aqi;
+    if (pm10aqi > pm25aqi) {
+      max_aqi = pm10aqi;
     }
-    vTaskDelete(NULL);
+    // static int dummy = 0;
+    // max_aqi += dummy;
+    // dummy += 10;
+    const auto& aqi_cat = GetAqiCategory(max_aqi);
+
+    // uint16_t bgcolor = tft.color24to16(aqi_cat.web_color);
+    uint16_t bgcolor = tft.color24to16(aqi_cat.color);
+    uint16_t fgcolor = tft.color24to16(FgColor(aqi_cat.color));
+    tft.fillScreen(bgcolor);
+    // Set "cursor" at top left corner of display (0,0) and select font 4
+    tft.setCursor(5, 5, 4);
+    // Black on green text.
+    tft.setTextColor(fgcolor, bgcolor);
+    tft.print("AQI: ");
+    tft.println(max_aqi);
+    tft.println(aqi_cat.message);
+    tft.println();
+
+    const auto& co2_cat = GetAqiCategory(Aqi(aqi_co2, 0, task_data->dsco220_data->co2_ppm));
+    tft.setTextColor(tft.color24to16(FgColor(co2_cat.color)),
+                     tft.color24to16(co2_cat.color));
+    tft.print("CO2: ");
+    tft.println(task_data->dsco220_data->co2_ppm);
+    // tft.print(" ppm\n");
+    tft.println();
+    tft.setTextColor(fgcolor, bgcolor);
+    tft.println("uptime: ");
+    tft.println(SecondsHumanReadable(millis()).c_str());
+  }
+  vTaskDelete(NULL);
 }
 
 void TaskServeWeb(void* task_data_arg) {
-    // InitTft();
-    // delay(5000);
-    // TaskTft();
     Serial.println("ServeWeb: Starting task...");
     TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
     WiFiServer server(/*port=*/ 80);
@@ -460,6 +601,7 @@ void TaskServeWeb(void* task_data_arg) {
 
     unsigned long last_print_time_ms = 0;
     for (;;) {
+      delay(10);
         if ((millis() - last_print_time_ms) > 10 * 60 * 1000 || !last_print_time_ms) {
             Serial.print("ui::TaskServeWeb(): core: ");
             Serial.println(xPortGetCoreID());
@@ -534,15 +676,15 @@ void TaskServeWeb(void* task_data_arg) {
             }
 
             // PM1.0 AQI is not a thing!
-            int pm1aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm1));
-            int pm25aqi = std::round(Aqi(aqi_pm2_5, task_data->pmsx003_data->pm25));
-            int pm10aqi = std::round(Aqi(aqi_pm10_0, task_data->pmsx003_data->pm10));
+            int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm1);
+            int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
+            int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
 
             int max_aqi = pm25aqi;
-            const char* max_aqi_class = AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm25);
+            const char* max_aqi_class = AqiTag(pm25aqi);
             if (pm10aqi > pm25aqi) {
                 max_aqi = pm10aqi;
-                max_aqi_class = AqiClass(aqi_pm10_0, task_data->pmsx003_data->pm10);
+                max_aqi_class = AqiTag(pm10aqi);
             }
 
             client.print("HTTP/1.1 200 OK\n");
@@ -557,20 +699,20 @@ void TaskServeWeb(void* task_data_arg) {
                 // Overall AQI
                 max_aqi_class,
                 max_aqi,
-                aqiMessage(max_aqi),
+                AqiMessage(max_aqi),
                 // PM 1.0/2.5/10.0 AQI
                 // PM1.0 AQI is not a thing!
-                AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm1),
+                AqiTag(pm1aqi),
                 pm1aqi,
                 task_data->pmsx003_data->pm1,
-                AqiClass(aqi_pm2_5, task_data->pmsx003_data->pm25),
+                AqiTag(pm25aqi),
                 pm25aqi,
                 task_data->pmsx003_data->pm25,
-                AqiClass(aqi_pm10_0, task_data->pmsx003_data->pm10),
+                AqiTag(pm10aqi),
                 pm10aqi,
                 task_data->pmsx003_data->pm10,
                 // CO2
-                co2Class(task_data->dsco220_data->co2_ppm),
+                Co2Tag(task_data->dsco220_data->co2_ppm),
                 task_data->dsco220_data->co2_ppm,
                 // Temp/Humidity/Pressure
                 task_data->bme280_data->temp_c,
@@ -610,8 +752,9 @@ void TaskDoPixels(void* task_data_arg) {
     TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
 
     for (;;) {
+        const auto& co2_cat = GetAqiCategory(Aqi(aqi_co2, 0, task_data->dsco220_data->co2_ppm));
         task_data->pixels->setBrightness(255);
-        task_data->pixels->setPixelColor(0, co2Color(task_data->dsco220_data->co2_ppm));
+        task_data->pixels->setPixelColor(0, co2_cat.color);
         task_data->pixels->show();
         delay(1000); // Delay for a period of time (in milliseconds).
     }

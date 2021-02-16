@@ -99,8 +99,6 @@ void setup()
     Serial.print("setup(): core: ");
     Serial.println(xPortGetCoreID());
 
-    ui::InitTft();
-
     // This chipid is the mac address, but reversed? I'll just use the actual mac address.
     String esp_chipid;
 	uint64_t chipid_num;
