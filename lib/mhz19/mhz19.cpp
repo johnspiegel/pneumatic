@@ -2,7 +2,7 @@
 
 #include "Arduino.h"
 
-#include "ui.h"
+#include "dump.h"
 
 namespace mhz19 {
 
@@ -145,7 +145,7 @@ void TaskPoll(void* task_data_param) {
         Serial.print("  Temp: ");
         Serial.print(task_data->temp_c);
         Serial.print(" °C ");
-        Serial.print(ui::CToF(task_data->temp_c));
+        Serial.print(dump::CToF(task_data->temp_c));
         Serial.print(" °F\n");
         delay(2000);
     }

@@ -21,10 +21,6 @@ struct TaskData {
 
 void InitTft(void);
 
-String MillisHumanReadable(unsigned long ms);
-
-float CToF(float temp_C);
-
 const char* aqiClass(int aqi);
 
 const char* aqiMessage(int aqi);

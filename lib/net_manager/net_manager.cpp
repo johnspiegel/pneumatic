@@ -6,7 +6,7 @@
 #include <esp_wifi.h>
 #include <vector>
 
-#include <ui.h>
+#include <dump.h>
 
 namespace net_manager {
 
@@ -217,7 +217,7 @@ bool Connect(unsigned long timeout_ms) {
                 // WiFi.disconnect(/*wifioff=*/ false, /*eraseap=*/ false);
                 // WiFi.disconnect(/*wifioff=*/ true);
                 Serial.print("WiFi: sleep for ");
-                Serial.println(ui::MillisHumanReadable(backoff_ms));
+                Serial.println(dump::MillisHumanReadable(backoff_ms));
                 delay(backoff_ms);
                 backoff_ms *= 2;
                 status = STATUS_CONNECTING;

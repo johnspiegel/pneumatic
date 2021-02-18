@@ -1,6 +1,6 @@
 #include "bme280.h"
 
-#include "ui.h"
+#include <dump.h>
 
 namespace bme280 {
 
@@ -31,7 +31,7 @@ void TaskPoll(void* task_data_param) {
         Serial.print("  Temp: ");
         Serial.print(data->temp_c);
         Serial.print(" °C ");
-        Serial.print(ui::CToF(data->temp_c));
+        Serial.print(dump::CToF(data->temp_c));
         Serial.print(" °F");
         Serial.print("  Pressure: ");
         Serial.print(data->pressurePa / 100.0);

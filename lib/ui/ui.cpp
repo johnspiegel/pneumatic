@@ -6,6 +6,7 @@
 #include <TFT_eSPI.h>
 
 #include "html.h"
+#include <dump.h>
 
 #define BUTTON_1     35
 #define BUTTON_2     0
@@ -91,103 +92,13 @@ void TaskTft() {
   delay(5000);
 }
 
-String SecondsHumanReadable(unsigned long ms) {
-    int days = ms / (24 * 60 * 60 * 1000);
-    ms %= (24 * 60 * 60 * 1000);
-    int hours = ms / (60 * 60 * 1000);
-    ms %= (60 * 60 * 1000);
-    int minutes = ms / (60 * 1000);
-    ms %= (60 * 1000);
-    int seconds = ms / (1000);
-    ms %= (1000);
-    if (ms >= 5000) {
-      seconds += 1;
-    }
-
-    char buf[8] = {0};
-    String str;
-    if (days) {
-        snprintf(buf, sizeof(buf), "%dd", days);
-        str += buf;
-    }
-    if (hours) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dh", hours);
-        } else {
-            snprintf(buf, sizeof(buf), "%dh", hours);
-        }
-        str += buf;
-    }
-    if (minutes) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dm", minutes);
-        } else {
-            snprintf(buf, sizeof(buf), "%dm", minutes);
-        }
-        str += buf;
-    }
-    if (str.length()) {
-        snprintf(buf, sizeof(buf), "%02ds", seconds);
-    } else {
-        snprintf(buf, sizeof(buf), "%ds", seconds);
-    }
-    str += buf;
-
-    return str;
-}
-
-String MillisHumanReadable(unsigned long ms) {
-    int days = ms / (24 * 60 * 60 * 1000);
-    ms %= (24 * 60 * 60 * 1000);
-    int hours = ms / (60 * 60 * 1000);
-    ms %= (60 * 60 * 1000);
-    int minutes = ms / (60 * 1000);
-    ms %= (60 * 1000);
-    int seconds = ms / (1000);
-    ms %= (1000);
-
-    char buf[8] = {0};
-    String str;
-    if (days) {
-        snprintf(buf, sizeof(buf), "%dd", days);
-        str += buf;
-    }
-    if (hours) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dh", hours);
-        } else {
-            snprintf(buf, sizeof(buf), "%dh", hours);
-        }
-        str += buf;
-    }
-    if (minutes) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dm", minutes);
-        } else {
-            snprintf(buf, sizeof(buf), "%dm", minutes);
-        }
-        str += buf;
-    }
-    if (str.length()) {
-        snprintf(buf, sizeof(buf), "%02d.%03ds", seconds, (int)ms);
-    } else {
-        snprintf(buf, sizeof(buf), "%d.%03ds", seconds, (int)ms);
-    }
-    str += buf;
-
-    return str;
-}
-
-float CToF(float temp_C) {
-    return temp_C * 9 / 5 + 32;
-}
-
 float calcAQI(int val, int concL, int concH, int aqiL, int aqiH) {
     return aqiL + float(val - concL) * (aqiH - aqiL)/(concH - concL);
 }
 
 uint32_t FgColor(uint32_t bg_color) {
-  // range: 0-255000
+  // https://www.w3.org/TR/AERT/#color-contrast
+  // range: [0,255000]
   int brightness = (bg_color >> 16) * 299 +
                    ((bg_color >> 8) & 0xff) * 587 +
                    (bg_color & 0xff) * 114;
@@ -588,7 +499,7 @@ void TaskDisplay(void* task_data_arg) {
     tft.println();
     tft.setTextColor(fgcolor, bgcolor);
     tft.println("uptime: ");
-    tft.println(SecondsHumanReadable(millis()).c_str());
+    tft.println(dump::SecondsHumanReadable(millis()).c_str());
   }
   vTaskDelete(NULL);
 }
@@ -716,12 +627,12 @@ void TaskServeWeb(void* task_data_arg) {
                 task_data->dsco220_data->co2_ppm,
                 // Temp/Humidity/Pressure
                 task_data->bme280_data->temp_c,
-                CToF(task_data->bme280_data->temp_c),
+                dump::CToF(task_data->bme280_data->temp_c),
                 task_data->bme280_data->humidityPercent,
                 task_data->bme280_data->pressurePa / 100.0,
 
                 // Bottom details
-                MillisHumanReadable(millis()).c_str(),
+                dump::MillisHumanReadable(millis()).c_str(),
                 task_data->pmsx003_data->particles_gt_0_3,
                 task_data->pmsx003_data->particles_gt_0_5,
                 task_data->pmsx003_data->particles_gt_1_0,
@@ -730,10 +641,10 @@ void TaskServeWeb(void* task_data_arg) {
                 task_data->pmsx003_data->particles_gt_10_0,
                 task_data->mhz19_data->co2_ppm,
                 task_data->mhz19_data->temp_c,
-                CToF(task_data->mhz19_data->temp_c),
+                dump::CToF(task_data->mhz19_data->temp_c),
                 task_data->dsco220_data->co2_ppm,
                 task_data->bme280_data->temp_c,
-                CToF(task_data->bme280_data->temp_c),
+                dump::CToF(task_data->bme280_data->temp_c),
                 task_data->bme280_data->pressurePa,
                 task_data->bme280_data->humidityPercent
             );
