@@ -13,7 +13,7 @@ String SecondsHumanReadable(unsigned long ms) {
     ms %= (60 * 1000);
     int seconds = ms / (1000);
     ms %= (1000);
-    if (ms >= 5000) {
+    if (ms >= 500) {
       seconds += 1;
     }
 
@@ -23,22 +23,21 @@ String SecondsHumanReadable(unsigned long ms) {
         snprintf(buf, sizeof(buf), "%dd", days);
         str += buf;
     }
-    if (hours) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dh", hours);
-        } else {
-            snprintf(buf, sizeof(buf), "%dh", hours);
-        }
-        str += buf;
+
+    if (str.length()) {
+        snprintf(buf, sizeof(buf), "%02dh", hours);
+    } else if (hours) {
+        snprintf(buf, sizeof(buf), "%dh", hours);
     }
-    if (minutes) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dm", minutes);
-        } else {
-            snprintf(buf, sizeof(buf), "%dm", minutes);
-        }
-        str += buf;
+    str += buf;
+
+    if (str.length()) {
+        snprintf(buf, sizeof(buf), "%02dm", minutes);
+    } else if (minutes) {
+        snprintf(buf, sizeof(buf), "%dm", minutes);
     }
+    str += buf;
+
     if (str.length()) {
         snprintf(buf, sizeof(buf), "%02ds", seconds);
     } else {
@@ -65,22 +64,21 @@ String MillisHumanReadable(unsigned long ms) {
         snprintf(buf, sizeof(buf), "%dd", days);
         str += buf;
     }
-    if (hours) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dh", hours);
-        } else {
-            snprintf(buf, sizeof(buf), "%dh", hours);
-        }
-        str += buf;
+
+    if (str.length()) {
+        snprintf(buf, sizeof(buf), "%02dh", hours);
+    } else if (hours) {
+        snprintf(buf, sizeof(buf), "%dh", hours);
     }
-    if (minutes) {
-        if (str.length()) {
-            snprintf(buf, sizeof(buf), "%02dm", minutes);
-        } else {
-            snprintf(buf, sizeof(buf), "%dm", minutes);
-        }
-        str += buf;
+    str += buf;
+
+    if (str.length()) {
+        snprintf(buf, sizeof(buf), "%02dm", minutes);
+    } else if (minutes) {
+        snprintf(buf, sizeof(buf), "%dm", minutes);
     }
+    str += buf;
+
     if (str.length()) {
         snprintf(buf, sizeof(buf), "%02d.%03ds", seconds, (int)ms);
     } else {
