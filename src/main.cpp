@@ -3,11 +3,11 @@
 #include <Arduino.h>
 #include <FreeRTOS.h>
 #include <HardwareSerial.h>
-#include <WiFi.h>
 #include <Wire.h>
 
 #include "bme280.h"
 #include "dsco220.h"
+#include "dump.h"
 #include "html.h"
 #include "mhz19.h"
 #include "net_manager.h"
@@ -16,25 +16,29 @@
 #include "ui.h"
 
 #ifndef LED_BUILTIN
-// Arduino Nano 33 IOT
-// #define LED_BUILTIN 13
+
 // ESP32 Dev Kit
 #define LED_BUILTIN 2
+
 // Heltec wifi kit 32
 // #define LED_BUILTIN 25
+
 #endif
 
 #define WS2812B_PIN 25
+
 // NodeMCU 32-s
 // #define PMSX003_RX_PIN 16
 // #define PMSX003_TX_PIN 17
+
 // TTGO T-Display
 #define PMSX003_RX_PIN 26
 #define PMSX003_TX_PIN 27
+
 #define MHZ19_RX_PIN 33
 #define MHZ19_TX_PIN 32
 #define BME280_I2C_ADDRESS 0x76
-// TODO: acutallu use ds-co2-20 address
+// TODO: acutally use ds-co2-20 address
 #define DSCO220_I2C_ADDRESS 0x08
 
 SemaphoreHandle_t i2c_mutex = nullptr;
@@ -250,7 +254,7 @@ void loop() {
 
     Serial.println("----------------------------------------");
     Serial.print("loop(): Uptime: ");
-    Serial.print(ui::MillisHumanReadable(millis()));
+    Serial.print(dump::MillisHumanReadable(millis()));
     Serial.print("  core: ");
     Serial.println(xPortGetCoreID());
 }
