@@ -8,30 +8,30 @@
 namespace pmsx003 {
 
 struct TaskData {
-    Stream* serial;
+  Stream* serial;
 
-	uint16_t pm1Raw;
-	uint16_t pm25Raw;
-	uint16_t pm10Raw;
+  uint16_t pm1Raw;
+  uint16_t pm25Raw;
+  uint16_t pm10Raw;
 
-	uint16_t pm1;
-	uint16_t pm25;
-	uint16_t pm10;
+  uint16_t pm1;
+  uint16_t pm25;
+  uint16_t pm10;
 
-	uint16_t particles_gt_0_3;
-	uint16_t particles_gt_0_5;
-	uint16_t particles_gt_1_0;
-	uint16_t particles_gt_2_5;
-	uint16_t particles_gt_5_0;
-	uint16_t particles_gt_10_0;
+  uint16_t particles_gt_0_3;
+  uint16_t particles_gt_0_5;
+  uint16_t particles_gt_1_0;
+  uint16_t particles_gt_2_5;
+  uint16_t particles_gt_5_0;
+  uint16_t particles_gt_10_0;
 };
 
 bool VerifyPacket(uint8_t* packet, int size);
 
-bool Read(Stream* serial, TaskData* data, unsigned long timeout_ms=5000);
+bool Read(Stream* serial, TaskData* data, unsigned long timeout_ms = 5000);
 
 void TaskPoll(void* task_data);
 
-} // namespace pmsx003
+}  // namespace pmsx003
 
 #endif  // PMSX003_H

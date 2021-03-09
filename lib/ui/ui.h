@@ -1,8 +1,8 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#include <stdint.h>
 #include <Adafruit_NeoPixel.h>
+#include <stdint.h>
 
 #include "bme280.h"
 #include "dsco220.h"
@@ -12,11 +12,11 @@
 namespace ui {
 
 struct TaskData {
-    pmsx003::TaskData*  pmsx003_data;
-    mhz19::TaskData*    mhz19_data;
-    dsco220::Data*      dsco220_data;
-    bme280::Data*       bme280_data;
-    Adafruit_NeoPixel*  pixels;
+  pmsx003::TaskData* pmsx003_data;
+  mhz19::TaskData* mhz19_data;
+  dsco220::Data* dsco220_data;
+  bme280::Data* bme280_data;
+  Adafruit_NeoPixel* pixels;
 };
 
 void InitTft(void);

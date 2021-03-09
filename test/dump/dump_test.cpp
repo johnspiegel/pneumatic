@@ -1,9 +1,9 @@
 #include <dump.h>
 #include <unity.h>
 
-using dump::SecondsHumanReadable;
-using dump::MillisHumanReadable;
 using dump::CToF;
+using dump::MillisHumanReadable;
+using dump::SecondsHumanReadable;
 
 void Test_SecondsHumanReadable() {
   TEST_ASSERT_EQUAL_STRING("0s", SecondsHumanReadable(0).c_str());
@@ -14,19 +14,24 @@ void Test_SecondsHumanReadable() {
   TEST_ASSERT_EQUAL_STRING("2s", SecondsHumanReadable(1500).c_str());
   TEST_ASSERT_EQUAL_STRING("59s", SecondsHumanReadable(59 * 1000).c_str());
   TEST_ASSERT_EQUAL_STRING("1m00s", SecondsHumanReadable(60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10m00s", SecondsHumanReadable(10 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10m00s", SecondsHumanReadable(10 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("1h00m00s", SecondsHumanReadable(1 * 60 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10h00m00s", SecondsHumanReadable(10 * 60 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("1d00h00m00s", SecondsHumanReadable(24 * 60 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10d00h00m00s", SecondsHumanReadable(10 * 24 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("10m00s",
+                           SecondsHumanReadable(10 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("10m00s",
+                           SecondsHumanReadable(10 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("1h00m00s",
+                           SecondsHumanReadable(1 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("10h00m00s",
+                           SecondsHumanReadable(10 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("1d00h00m00s",
+                           SecondsHumanReadable(24 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING(
+      "10d00h00m00s", SecondsHumanReadable(10 * 24 * 60 * 60 * 1000).c_str());
 
-  TEST_ASSERT_EQUAL_STRING("32d12h34m56s", SecondsHumanReadable(
-        32ul * 24 * 60 * 60 * 1000 +
-               12 * 60 * 60 * 1000 +
-                    34 * 60 * 1000 +
-                         56 * 1000 
-        ).c_str());
+  TEST_ASSERT_EQUAL_STRING(
+      "32d12h34m56s",
+      SecondsHumanReadable(32ul * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000 +
+                           34 * 60 * 1000 + 56 * 1000)
+          .c_str());
 }
 
 void Test_MillisHumanReadable() {
@@ -41,20 +46,25 @@ void Test_MillisHumanReadable() {
   TEST_ASSERT_EQUAL_STRING("1.500s", MillisHumanReadable(1500).c_str());
   TEST_ASSERT_EQUAL_STRING("59.000s", MillisHumanReadable(59 * 1000).c_str());
   TEST_ASSERT_EQUAL_STRING("1m00.000s", MillisHumanReadable(60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10m00.000s", MillisHumanReadable(10 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10m00.000s", MillisHumanReadable(10 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("1h00m00.000s", MillisHumanReadable(1 * 60 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10h00m00.000s", MillisHumanReadable(10 * 60 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("1d00h00m00.000s", MillisHumanReadable(24 * 60 * 60 * 1000).c_str());
-  TEST_ASSERT_EQUAL_STRING("10d00h00m00.000s", MillisHumanReadable(10 * 24 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("10m00.000s",
+                           MillisHumanReadable(10 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("10m00.000s",
+                           MillisHumanReadable(10 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("1h00m00.000s",
+                           MillisHumanReadable(1 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("10h00m00.000s",
+                           MillisHumanReadable(10 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING("1d00h00m00.000s",
+                           MillisHumanReadable(24 * 60 * 60 * 1000).c_str());
+  TEST_ASSERT_EQUAL_STRING(
+      "10d00h00m00.000s",
+      MillisHumanReadable(10 * 24 * 60 * 60 * 1000).c_str());
 
-  TEST_ASSERT_EQUAL_STRING("32d12h34m56.987s", MillisHumanReadable(
-        32ul * 24 * 60 * 60 * 1000 +
-               12 * 60 * 60 * 1000 +
-                    34 * 60 * 1000 +
-                         56 * 1000 +
-                               987 
-        ).c_str());
+  TEST_ASSERT_EQUAL_STRING(
+      "32d12h34m56.987s",
+      MillisHumanReadable(32ul * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000 +
+                          34 * 60 * 1000 + 56 * 1000 + 987)
+          .c_str());
 }
 
 void Test_CToF() {
@@ -83,5 +93,4 @@ void setup() {
   UNITY_END();
 }
 
-void loop() {
-}
+void loop() {}

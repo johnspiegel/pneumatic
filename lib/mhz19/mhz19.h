@@ -8,20 +8,21 @@
 namespace mhz19 {
 
 struct TaskData {
-    Stream*     serial;
+  Stream* serial;
 
-    uint16_t    co2_ppm;
-    int8_t      temp_c;
+  uint16_t co2_ppm;
+  int8_t temp_c;
 };
 
-uint8_t Checksum(uint8_t *buf, int size);
+uint8_t Checksum(uint8_t* buf, int size);
 
-bool SetAutoBackgroundCalibration(Stream* serial, bool abc_on, unsigned long timeout_ms = 5000);
+bool SetAutoBackgroundCalibration(Stream* serial, bool abc_on,
+                                  unsigned long timeout_ms = 5000);
 
 bool Read(Stream* serial, TaskData* data, unsigned long timeout_ms = 5000);
 
 void TaskPoll(void* task_data_param);
 
-} // namespace mhz19
+}  // namespace mhz19
 
 #endif  // MHZ19_H

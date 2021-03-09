@@ -6,12 +6,12 @@
 namespace bme280 {
 
 struct Data {
-    Adafruit_BME280* bme280;
-    SemaphoreHandle_t i2c_mutex;
+  Adafruit_BME280* bme280;
+  SemaphoreHandle_t i2c_mutex;
 
-    float temp_c;
-    float pressurePa;
-    float humidityPercent;
+  float temp_c;
+  float pressurePa;
+  float humidityPercent;
 };
 
 void TaskPoll(void* task_data_param);
