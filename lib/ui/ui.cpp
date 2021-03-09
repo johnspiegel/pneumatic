@@ -1,6 +1,5 @@
 #include "ui.h"
 
-#include <Adafruit_Neopixel.h>
 #include <WiFi.h>
 #include <WiFiServer.h>
 #include <TFT_eSPI.h>
