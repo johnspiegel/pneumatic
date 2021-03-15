@@ -4,6 +4,8 @@
 #include <FreeRTOS.h>
 #include <HardwareSerial.h>
 #include <Wire.h>
+#include <esp_log.h>
+#include <esp_sntp.h>
 
 #include "bme280.h"
 #include "dsco220.h"
@@ -40,6 +42,8 @@
 #define BME280_I2C_ADDRESS 0x76
 // TODO: acutally use ds-co2-20 address
 #define DSCO220_I2C_ADDRESS 0x08
+
+static const char* TAG = "AirGadgetMain";
 
 SemaphoreHandle_t i2c_mutex = nullptr;
 
@@ -167,6 +171,15 @@ void setup() {
   bme280_data.i2c_mutex = i2c_mutex;
   bme280_data.bme280 = &bme;
 
+  ESP_LOGI(TAG, "Initializing NTP");
+  sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  sntp_servermode_dhcp(true);
+  // sntp_setservername(0, "pool.ntp.org");
+  sntp_setservername(0, "time.google.com");
+  sntp_init();
+  setenv("TZ", "PST8PDT,M3.2.0,M11.1.0", 1);
+  tzset();
+
   // Apparently ESP32 FreeRTOS can't elegantly handle different tasks at the
   // same priority without the possibility of starvation.
   int next_priority = 2;
@@ -241,4 +254,13 @@ void loop() {
   Serial.print(dump::MillisHumanReadable(millis()));
   Serial.print("  core: ");
   Serial.println(xPortGetCoreID());
+
+  ESP_LOGI(TAG, "NTP sync status: %d", sntp_get_sync_status());
+  time_t now;
+  time(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  char strftime_buf[64];
+  strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+  ESP_LOGI(TAG, "Time is: %s", strftime_buf);
 }
