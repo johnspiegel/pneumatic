@@ -9,6 +9,7 @@
     * reboot if can't ping some service?
     * reboot if can't connect to self webserver?
     * Write out to flash the number of resets
+    * Figure out how to use the RTC watchdog
   * push to influxdb
   * Thread safety - use proper mutexes to guard shared data.
   * clean up wifi code
