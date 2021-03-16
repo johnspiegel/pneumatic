@@ -215,11 +215,13 @@ void setup() {
               /*param=*/&ui_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
+#if 0
   xTaskCreate(sensor_community::TaskSensorCommunity, "TaskSensorCommunity",
               /*stack_size=*/4 * 1024,
               /*param=*/&ui_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
+#endif
   xTaskCreate(ui::TaskDisplay, "TasDisplay",
               /*stack_size=*/16 * 1024,
               /*param=*/&ui_task_data,
