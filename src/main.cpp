@@ -16,6 +16,7 @@
 #include "pmsx003.h"
 #include "sensor_community.h"
 #include "ui.h"
+#include "watchdog.h"
 
 #ifndef LED_BUILTIN
 
@@ -263,4 +264,11 @@ void loop() {
   char strftime_buf[64];
   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
   ESP_LOGI(TAG, "Time is: %s", strftime_buf);
+
+  // Reset once per hour cause we suck
+  if (millis() > 60 * 60 * 1000 && last_print_time_ms) {
+    ESP_LOGI(TAG, "Resetting just cuz");
+    delay(1000);
+    esp_restart();
+  }
 }
