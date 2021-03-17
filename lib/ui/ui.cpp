@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <WiFiServer.h>
 #include <dump.h>
+#include <esp_log.h>
 
 #include "html.h"
 
@@ -16,6 +17,7 @@ namespace ui {
 
 namespace {
 TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
+const char TAG[] = "ui";
 }  // namespace
 
 void InitTft(void) {
@@ -379,11 +381,68 @@ int32_t co2Color(int co2_ppm) {
   }
 }
 
-void DoVarz(WiFiClient* client, const TaskData* task_data) {
-  client->print("HTTP/1.1 200 OK\n");
-  client->print("Content-Type:text/plain; version=0.0.4; charset=utf-8\n");
-  client->print("Connection: close\n");
+void DoStatusz(WiFiClient* client, const TaskData* task_data) {
+  client->print("HTTP/1.1 200 OK\r\n");
+  client->print("Content-Type:text/html charset=utf-8\r\n");
+  client->print("Connection: close\r\n");
+  client->print("\r\n");
+
+  // PM1.0 AQI is not a thing!
+  int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm1);
+  int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
+  int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
+
+  int max_aqi = pm25aqi;
+  const char* max_aqi_class = AqiTag(pm25aqi);
+  if (pm10aqi > pm25aqi) {
+    max_aqi = pm10aqi;
+    max_aqi_class = AqiTag(pm10aqi);
+  }
+
+  // int co2Rand = random(0,6000);
+
+  char buf[4 * 1024] = {0};
+  snprintf(buf, sizeof(buf), indexTemplate,
+           // Overall AQI
+           max_aqi_class, max_aqi, AqiMessage(max_aqi),
+           // PM 1.0/2.5/10.0 AQI
+           // PM1.0 AQI is not a thing!
+           AqiTag(pm1aqi), pm1aqi, task_data->pmsx003_data->pm1,
+           AqiTag(pm25aqi), pm25aqi, task_data->pmsx003_data->pm25,
+           AqiTag(pm10aqi), pm10aqi, task_data->pmsx003_data->pm10,
+           // CO2
+           Co2Tag(task_data->dsco220_data->co2_ppm),
+           task_data->dsco220_data->co2_ppm,
+           // Temp/Humidity/Pressure
+           task_data->bme280_data->temp_c,
+           dump::CToF(task_data->bme280_data->temp_c),
+           task_data->bme280_data->humidityPercent,
+           task_data->bme280_data->pressurePa / 100.0,
+
+           // Bottom details
+           dump::MillisHumanReadable(millis()).c_str(),
+           task_data->pmsx003_data->particles_gt_0_3,
+           task_data->pmsx003_data->particles_gt_0_5,
+           task_data->pmsx003_data->particles_gt_1_0,
+           task_data->pmsx003_data->particles_gt_2_5,
+           task_data->pmsx003_data->particles_gt_5_0,
+           task_data->pmsx003_data->particles_gt_10_0,
+           task_data->mhz19_data->co2_ppm, task_data->mhz19_data->temp_c,
+           dump::CToF(task_data->mhz19_data->temp_c),
+           task_data->dsco220_data->co2_ppm, task_data->bme280_data->temp_c,
+           dump::CToF(task_data->bme280_data->temp_c),
+           task_data->bme280_data->pressurePa,
+           task_data->bme280_data->humidityPercent);
+  client->print(buf);
+
   client->print("\n");
+}
+
+void DoVarz(WiFiClient* client, const TaskData* task_data) {
+  client->print("HTTP/1.1 200 OK\r\n");
+  client->print("Content-Type:text/plain; version=0.0.4; charset=utf-8\r\n");
+  client->print("Connection: close\r\n");
+  client->print("\r\n");
 
   String mac = WiFi.macAddress();
   // mac.replace(":", "");
@@ -458,14 +517,12 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
                                  task_data->bme280_data->pressurePa));
   client->print(MetricLineDouble("humidity_percent", R"(sensor="BME280")",
                                  task_data->bme280_data->humidityPercent));
-  client->stop();
 }
 
 void TaskDisplay(void* task_data_arg) {
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
   tft.init();
 
-  unsigned long last_print_time_ms = 0;
   for (;; delay(1000)) {
     int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
     int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
@@ -511,144 +568,107 @@ void TaskServeWeb(void* task_data_arg) {
   Serial.println("ServeWeb: Starting task...");
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
   WiFiServer server(/*port=*/80);
-  bool server_started = false;
 
   unsigned long last_print_time_ms = 0;
+  unsigned long last_client_time_ms = 0;
   for (;;) {
     delay(10);
-    if ((millis() - last_print_time_ms) > 10 * 60 * 1000 ||
-        !last_print_time_ms) {
-      Serial.print("ui::TaskServeWeb(): core: ");
-      Serial.println(xPortGetCoreID());
+    if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
+      ESP_LOGI(
+          TAG,
+          "TaskServeWeb(): uptime: %s core: %d server_running: %d "
+          "since_last_http_client: %s",
+          dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+          bool(server),
+          dump::MillisHumanReadable(millis() - last_client_time_ms).c_str());
+      if (!WiFi.isConnected()) {
+        ESP_LOGW(TAG, "TaskServeWeb: Waiting for WiFi...");
+      }
       last_print_time_ms = millis();
     }
+
     // TODO: register for wifi disconnect signal to eliminate restart races.
-    if (!WiFi.isConnected() || !server_started) {
-      server.end();
-      while (!WiFi.isConnected()) {
-        Serial.println("ServeWeb: Waiting for WiFi...");
+    if (!server) {
+      // server.end();
+      ESP_LOGI(TAG, "Starting WiFiServer");
+      // delay(5000);
+      server.begin();
+      if (!server) {
+        ESP_LOGE(TAG, "Failed to start WiFiServer");
+        // server.end();
         delay(1000);
         continue;
       }
-      Serial.println("----------------------------------------");
-      Serial.println("WiFi back online");
-      // delay(5000);
-      server.begin();
-      server_started = true;
-      Serial.println("----------------------------------------");
-      Serial.println("WiFiServer started");
+      ESP_LOGI(TAG, "WiFiServer started on port 80");
     }
 
     // Serial.println("Waiting for HTTP connection...");
-    WiFiClient client = server.available();
-
+    WiFiClient client = server.accept();
     if (!client) {
       // Serial.println("ServeWeb: Got no for HTTP connection...");
       client.stop();
-      delay(10);
+      // delay(10);
       continue;
     }
 
     // long connectTime = millis();
-    String request;
+    std::string request;
     Serial.println("New http client");
-    unsigned long client_start_time_ms = millis();
+    last_client_time_ms = millis();
+    ESP_LOGI(TAG, "ui::TaskServeWeb(): up: %s http request from: %s",
+             dump::MillisHumanReadable(last_client_time_ms).c_str(),
+             client.remoteIP().toString().c_str());
     while (client.connected()) {
-      if (millis() - client_start_time_ms > 5000) {
+      if (millis() - last_client_time_ms > 20000) {
         Serial.println("ERROR: TaskServeWeb: Timed out waiting for client");
         client.stop();
         continue;
       }
 
-      if (client.available()) {
-        char c = client.read();
-        if (c != '\r') {
-          request += c;
+      int available = client.available();
+      if (available) {
+        int current_size = request.size();
+        request.resize(current_size + available);
+        int read_count = client.read(
+            reinterpret_cast<uint8_t*>(&request[0]) + current_size, available);
+        if (read_count > 0) {
+          request.resize(current_size + read_count);
+        } else {
+          request.resize(current_size);
         }
-        continue;
       }
-      if (request[request.length() - 1] != '\n') {
+      if (client.available() || request.find("\r\n\r\n") == std::string::npos) {
         continue;
       }
 
-      Serial.print("HTTP Request:\n----\n");
-      Serial.print(request);
-      Serial.print("----\n");
+      ESP_LOGI(TAG,
+               "HTTP Request -- BEGIN --\n"
+               "%s"
+               "-- END --",
+               request.c_str());
 
-      if (request.startsWith("GET /favicon.ico ")) {
-        client.print("HTTP/1.1 404 Not Found\n");
-        client.print("Connection: close\n");
-        client.print("\n");
-        client.stop();
-        Serial.println("TaskServeWeb: /favicon.ico client finished");
-        continue;
-      }
-      if (request.startsWith("GET /varz ") ||
-          request.startsWith("GET /metrics ")) {
+      if (request.rfind("GET /favicon.ico ", 0) == 0) {
+        Serial.println("TaskServeWeb: /favicon.ico");
+        client.print("HTTP/1.1 404 Not Found\r\n");
+        client.print("Connection: close\r\n");
+        client.print("\r\n");
+      } else if (request.rfind("GET /varz ", 0) == 0 ||
+                 request.rfind("GET /metrics ", 0) == 0) {
         Serial.println("TaskServeWeb: /varz");
         DoVarz(&client, task_data);
-        continue;
+      } else {
+        Serial.println("TaskServeWeb: /statusz");
+        DoStatusz(&client, task_data);
       }
-
-      // PM1.0 AQI is not a thing!
-      int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm1);
-      int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
-      int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
-
-      int max_aqi = pm25aqi;
-      const char* max_aqi_class = AqiTag(pm25aqi);
-      if (pm10aqi > pm25aqi) {
-        max_aqi = pm10aqi;
-        max_aqi_class = AqiTag(pm10aqi);
-      }
-
-      client.print("HTTP/1.1 200 OK\n");
-      client.print("Content-Type:text/html charset=utf-8\n");
-      client.print("Connection: close\n");
-      client.print("\n");
-
-      // int co2Rand = random(0,6000);
-
-      char buf[4 * 1024] = {0};
-      snprintf(buf, sizeof(buf), indexTemplate,
-               // Overall AQI
-               max_aqi_class, max_aqi, AqiMessage(max_aqi),
-               // PM 1.0/2.5/10.0 AQI
-               // PM1.0 AQI is not a thing!
-               AqiTag(pm1aqi), pm1aqi, task_data->pmsx003_data->pm1,
-               AqiTag(pm25aqi), pm25aqi, task_data->pmsx003_data->pm25,
-               AqiTag(pm10aqi), pm10aqi, task_data->pmsx003_data->pm10,
-               // CO2
-               Co2Tag(task_data->dsco220_data->co2_ppm),
-               task_data->dsco220_data->co2_ppm,
-               // Temp/Humidity/Pressure
-               task_data->bme280_data->temp_c,
-               dump::CToF(task_data->bme280_data->temp_c),
-               task_data->bme280_data->humidityPercent,
-               task_data->bme280_data->pressurePa / 100.0,
-
-               // Bottom details
-               dump::MillisHumanReadable(millis()).c_str(),
-               task_data->pmsx003_data->particles_gt_0_3,
-               task_data->pmsx003_data->particles_gt_0_5,
-               task_data->pmsx003_data->particles_gt_1_0,
-               task_data->pmsx003_data->particles_gt_2_5,
-               task_data->pmsx003_data->particles_gt_5_0,
-               task_data->pmsx003_data->particles_gt_10_0,
-               task_data->mhz19_data->co2_ppm, task_data->mhz19_data->temp_c,
-               dump::CToF(task_data->mhz19_data->temp_c),
-               task_data->dsco220_data->co2_ppm, task_data->bme280_data->temp_c,
-               dump::CToF(task_data->bme280_data->temp_c),
-               task_data->bme280_data->pressurePa,
-               task_data->bme280_data->humidityPercent);
-      client.print(buf);
-
-      client.print("\n");
+      client.flush();
       client.stop();
-      Serial.println("TaskServeWeb: client finished");
-      continue;
+      ESP_LOGI(
+          TAG, "TaskServeWeb(): client finished in: %s",
+          dump::MillisHumanReadable(millis() - last_client_time_ms).c_str());
+      break;
     }
   }
+
   vTaskDelete(NULL);
 }
 

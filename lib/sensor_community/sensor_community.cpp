@@ -3,11 +3,13 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
+#include <esp_log.h>
 
 namespace sensor_community {
 namespace {
 WiFiClient wifi_client;
 HTTPClient http_client;
+const char TAG[] = "sensor_community";
 }  // namespace
 
 bool Push(const ui::TaskData* data) {
@@ -55,6 +57,7 @@ bool Push(const ui::TaskData* data) {
     // Serial.print("SensorCommunity: Data pushed: ");
     // Serial.println(err);
     // Serial.println(http_client.getString());
+    http_client.getString();
   } else {
     Serial.print("ERROR: SensorCommunity: http return: ");
     Serial.println(err);
@@ -93,6 +96,7 @@ bool Push(const ui::TaskData* data) {
     // Serial.print("SensorCommunity: Data pushed: ");
     // Serial.println(err);
     // Serial.println(http_client.getString());
+    http_client.getString();
   } else {
     Serial.print("ERROR: SensorCommunity: http return: ");
     Serial.println(err);
@@ -112,6 +116,11 @@ void TaskSensorCommunity(void* task_param) {
   delay(60000);
 
   for (;;) {
+    if (!WiFi.isConnected()) {
+      ESP_LOGW(TAG, "TaskSensorCommunity: Waiting for WiFi...");
+      delay(10000);
+      continue;
+    }
     Serial.print("TaskSensorCommunity(): core: ");
     Serial.println(xPortGetCoreID());
     Serial.print("SensorCommunity: Pushing data...\n");
