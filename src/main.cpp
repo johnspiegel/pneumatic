@@ -16,7 +16,6 @@
 #include "pmsx003.h"
 #include "sensor_community.h"
 #include "ui.h"
-#include "watchdog.h"
 
 #ifndef LED_BUILTIN
 
