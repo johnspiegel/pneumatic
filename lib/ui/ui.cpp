@@ -618,25 +618,32 @@ void TaskServeWeb(void* task_data_arg) {
              dump::MillisHumanReadable(last_client_time_ms).c_str(),
              client.remoteIP().toString().c_str());
     while (client.connected()) {
-      if (millis() - last_client_time_ms > 20000) {
-        Serial.println("ERROR: TaskServeWeb: Timed out waiting for client");
+      if (millis() - last_client_time_ms > 5000) {
+        ESP_LOGW(
+            TAG,
+            "TaskServeWeb: Timed out waiting for client, request so far:\n[%s]",
+            request.c_str());
         client.stop();
+        delay(10);
         continue;
       }
 
       int available = client.available();
       if (available) {
-        int current_size = request.size();
-        request.resize(current_size + available);
+        int old_size = request.size();
+        request.resize(old_size + available);
         int read_count = client.read(
-            reinterpret_cast<uint8_t*>(&request[0]) + current_size, available);
+            reinterpret_cast<uint8_t*>(&request[0]) + old_size, available);
         if (read_count > 0) {
-          request.resize(current_size + read_count);
+          request.resize(old_size + read_count);
         } else {
-          request.resize(current_size);
+          request.resize(old_size);
         }
+        ESP_LOGI(TAG, "TaskServeWeb: Read %d bytes, old_size: %d new_size: %d", read_count,
+                 old_size, request.size());
       }
       if (client.available() || request.find("\r\n\r\n") == std::string::npos) {
+        delay(10);
         continue;
       }
 
@@ -666,6 +673,7 @@ void TaskServeWeb(void* task_data_arg) {
           dump::MillisHumanReadable(millis() - last_client_time_ms).c_str());
       break;
     }
+    client.stop();
   }
 
   vTaskDelete(NULL);
