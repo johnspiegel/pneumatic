@@ -36,9 +36,9 @@ bool Push(const ui::TaskData* data) {
             ]
         })";
   payload.replace("{software_version}", kSoftwareVersion);
-  payload.replace("{pm1_0}", String(data->pmsx003_data->pm1));
-  payload.replace("{pm2_5}", String(data->pmsx003_data->pm25));
-  payload.replace("{pm10_0}", String(data->pmsx003_data->pm10));
+  payload.replace("{pm1_0}", String(data->pmsx003_data->pm_1_0));
+  payload.replace("{pm2_5}", String(data->pmsx003_data->pm_2_5));
+  payload.replace("{pm10_0}", String(data->pmsx003_data->pm_10_0));
 
   // Serial.print("SensorCommunity: Payload:\n");
   // Serial.print(payload);
@@ -76,8 +76,8 @@ bool Push(const ui::TaskData* data) {
         })";
   payload.replace("{software_version}", kSoftwareVersion);
   payload.replace("{temperature}", String(data->bme280_data->temp_c));
-  payload.replace("{humidity}", String(data->bme280_data->humidityPercent));
-  payload.replace("{pressure}", String(data->bme280_data->pressurePa));
+  payload.replace("{humidity}", String(data->bme280_data->humidity_pct));
+  payload.replace("{pressure}", String(data->bme280_data->pressure_pa));
 
   // Serial.print("SensorCommunity: Payload:\n");
   // Serial.print(payload);

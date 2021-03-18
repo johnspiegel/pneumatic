@@ -388,9 +388,9 @@ void DoStatusz(WiFiClient* client, const TaskData* task_data) {
   client->print("\r\n");
 
   // PM1.0 AQI is not a thing!
-  int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm1);
-  int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
-  int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
+  int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_1_0);
+  int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_2_5);
+  int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm_10_0);
 
   int max_aqi = pm25aqi;
   const char* max_aqi_class = AqiTag(pm25aqi);
@@ -407,17 +407,17 @@ void DoStatusz(WiFiClient* client, const TaskData* task_data) {
            max_aqi_class, max_aqi, AqiMessage(max_aqi),
            // PM 1.0/2.5/10.0 AQI
            // PM1.0 AQI is not a thing!
-           AqiTag(pm1aqi), pm1aqi, task_data->pmsx003_data->pm1,
-           AqiTag(pm25aqi), pm25aqi, task_data->pmsx003_data->pm25,
-           AqiTag(pm10aqi), pm10aqi, task_data->pmsx003_data->pm10,
+           AqiTag(pm1aqi), pm1aqi, task_data->pmsx003_data->pm_1_0,
+           AqiTag(pm25aqi), pm25aqi, task_data->pmsx003_data->pm_2_5,
+           AqiTag(pm10aqi), pm10aqi, task_data->pmsx003_data->pm_10_0,
            // CO2
            Co2Tag(task_data->dsco220_data->co2_ppm),
            task_data->dsco220_data->co2_ppm,
            // Temp/Humidity/Pressure
            task_data->bme280_data->temp_c,
            dump::CToF(task_data->bme280_data->temp_c),
-           task_data->bme280_data->humidityPercent,
-           task_data->bme280_data->pressurePa / 100.0,
+           task_data->bme280_data->humidity_pct,
+           task_data->bme280_data->pressure_pa / 100.0,
 
            // Bottom details
            dump::MillisHumanReadable(millis()).c_str(),
@@ -431,8 +431,8 @@ void DoStatusz(WiFiClient* client, const TaskData* task_data) {
            dump::CToF(task_data->mhz19_data->temp_c),
            task_data->dsco220_data->co2_ppm, task_data->bme280_data->temp_c,
            dump::CToF(task_data->bme280_data->temp_c),
-           task_data->bme280_data->pressurePa,
-           task_data->bme280_data->humidityPercent);
+           task_data->bme280_data->pressure_pa,
+           task_data->bme280_data->humidity_pct);
   client->print(buf);
 
   client->print("\n");
@@ -485,17 +485,24 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
   client->print(
       MetricLineInt("wifi_txpower", wifi_fields.c_str(), WiFi.getTxPower()));
 
-  client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm1.0")",
-                              task_data->pmsx003_data->pm1));
-  client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm2.5")",
-                              task_data->pmsx003_data->pm25));
-  client->print(MetricLineInt("pm_ug_m3", R"(sensor="PMSA003",size="pm10.0")",
-                              task_data->pmsx003_data->pm10));
+  if (millis() < 60000) {
+    ESP_LOGI(TAG, "Not reporting sensor varz until up for 1m");
+    return;
+  }
+
+  // Particulate
+  client->print(MetricLineDouble("pm_ug_m3", R"(sensor="PMSA003",size="pm1.0")",
+                                 task_data->pmsx003_data->pm_1_0));
+  client->print(MetricLineDouble("pm_ug_m3", R"(sensor="PMSA003",size="pm2.5")",
+                                 task_data->pmsx003_data->pm_2_5));
+  client->print(MetricLineDouble("pm_ug_m3",
+                                 R"(sensor="PMSA003",size="pm10.0")",
+                                 task_data->pmsx003_data->pm_10_0));
 
   // PM1.0 AQI is not a thing!
-  int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm1);
-  int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
-  int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
+  int pm1aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_1_0);
+  int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_2_5);
+  int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm_10_0);
   client->print(
       MetricLineInt("us_aqi", R"(sensor="PMSA003",size="pm1.0")", pm1aqi));
   client->print(
@@ -514,9 +521,9 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
   client->print(MetricLineDouble("temp_c", R"(sensor="BME280")",
                                  task_data->bme280_data->temp_c));
   client->print(MetricLineDouble("pressure_pa", R"(sensor="BME280")",
-                                 task_data->bme280_data->pressurePa));
+                                 task_data->bme280_data->pressure_pa));
   client->print(MetricLineDouble("humidity_percent", R"(sensor="BME280")",
-                                 task_data->bme280_data->humidityPercent));
+                                 task_data->bme280_data->humidity_pct));
 }
 
 void TaskDisplay(void* task_data_arg) {
@@ -524,8 +531,8 @@ void TaskDisplay(void* task_data_arg) {
   tft.init();
 
   for (;; delay(1000)) {
-    int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm25);
-    int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm10);
+    int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_2_5);
+    int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm_10_0);
 
     int max_aqi = pm25aqi;
     if (pm10aqi > pm25aqi) {
@@ -639,8 +646,8 @@ void TaskServeWeb(void* task_data_arg) {
         } else {
           request.resize(old_size);
         }
-        ESP_LOGI(TAG, "TaskServeWeb: Read %d bytes, old_size: %d new_size: %d", read_count,
-                 old_size, request.size());
+        ESP_LOGI(TAG, "TaskServeWeb: Read %d bytes, old_size: %d new_size: %d",
+                 read_count, old_size, request.size());
       }
       if (client.available() || request.find("\r\n\r\n") == std::string::npos) {
         delay(10);

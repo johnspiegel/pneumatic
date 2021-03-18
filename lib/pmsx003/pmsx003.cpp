@@ -1,8 +1,11 @@
 #include "pmsx003.h"
 
-#include "Arduino.h"
+#include <Arduino.h>
+#include <dump.h>
 
 namespace pmsx003 {
+
+using dump::Ewma;
 
 bool VerifyPacket(uint8_t* packet, int size) {
   if (size < 6) {
@@ -118,24 +121,34 @@ Serial.println("");
   data->pm25Raw = (buffer[6] << 8) | buffer[7];
   data->pm10Raw = (buffer[8] << 8) | buffer[9];
 
-  data->pm1 = (buffer[10] << 8) | buffer[11];
-  data->pm25 = (buffer[12] << 8) | buffer[13];
-  data->pm10 = (buffer[14] << 8) | buffer[15];
+  uint16_t pm_1_0 = (buffer[10] << 8) | buffer[11];
+  data->pm_1_0 = Ewma(pm_1_0, data->pm_1_0, 11);
+  uint16_t pm_2_5 = (buffer[12] << 8) | buffer[13];
+  data->pm_2_5 = Ewma(pm_2_5, data->pm_2_5, 11);
+  uint16_t pm_10_0 = (buffer[14] << 8) | buffer[15];
+  data->pm_10_0 = Ewma(pm_10_0, data->pm_10_0, 11);
 
-  data->particles_gt_0_3 = (buffer[16] << 8) | buffer[17];
-  data->particles_gt_0_5 = (buffer[18] << 8) | buffer[19];
-  data->particles_gt_1_0 = (buffer[20] << 8) | buffer[21];
-  data->particles_gt_2_5 = (buffer[22] << 8) | buffer[23];
-  data->particles_gt_5_0 = (buffer[24] << 8) | buffer[25];
-  data->particles_gt_10_0 = (buffer[26] << 8) | buffer[27];
+  uint16_t particles_gt_0_3 = (buffer[16] << 8) | buffer[17];
+  data->particles_gt_0_3 = Ewma(particles_gt_0_3, data->particles_gt_0_3, 11);
+  uint16_t particles_gt_0_5 = (buffer[18] << 8) | buffer[19];
+  data->particles_gt_0_5 = Ewma(particles_gt_0_5, data->particles_gt_0_5, 11);
+  uint16_t particles_gt_1_0 = (buffer[20] << 8) | buffer[21];
+  data->particles_gt_1_0 = Ewma(particles_gt_1_0, data->particles_gt_1_0, 11);
+  uint16_t particles_gt_2_5 = (buffer[22] << 8) | buffer[23];
+  data->particles_gt_2_5 = Ewma(particles_gt_2_5, data->particles_gt_2_5, 11);
+  uint16_t particles_gt_5_0 = (buffer[24] << 8) | buffer[25];
+  data->particles_gt_5_0 = Ewma(particles_gt_5_0, data->particles_gt_5_0, 11);
+  uint16_t particles_gt_10_0 = (buffer[26] << 8) | buffer[27];
+  data->particles_gt_10_0 =
+      Ewma(particles_gt_10_0, data->particles_gt_10_0, 11);
 
   /*
 Serial.print("  [ug/m^3] PM1.0: ");
-Serial.print(data->pm1);
+Serial.print(data->pm_1_0);
 Serial.print("  PM2.5: ");
-Serial.print(data->pm25);
+Serial.print(data->pm_2_5);
 Serial.print("  PM10: ");
-Serial.print(data->pm10);
+Serial.print(data->pm_10_0);
 Serial.println();
   */
 
@@ -163,11 +176,11 @@ void TaskPoll(void* task_param) {
 
     Serial.print("PMSx003 data:");
     Serial.print("  [ug/m^3] PM1.0: ");
-    Serial.print(task_data->pm1);
+    Serial.print(task_data->pm_1_0);
     Serial.print("  PM2.5: ");
-    Serial.print(task_data->pm25);
+    Serial.print(task_data->pm_2_5);
     Serial.print("  PM10: ");
-    Serial.print(task_data->pm10);
+    Serial.print(task_data->pm_10_0);
     Serial.println();
   }
 

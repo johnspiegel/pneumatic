@@ -93,19 +93,19 @@ div.bonusText {
 		<div class="aqiBox %s">
 			<div class="aqiBoxTitle">PM 1.0</div>
 			<div class="aqiBoxAqi all-center">%d</div>
-			<div class="aqiBoxDetails">%d µg/m<sup>3</sup></div>
+			<div class="aqiBoxDetails">%.1f µg/m<sup>3</sup></div>
 		</div>
 
 		<div class="aqiBox %s">
 			<div class="aqiBoxTitle">PM 2.5</div>
 			<div class="aqiBoxAqi all-center">%d</div>
-			<div class="aqiBoxDetails">%d µg/m<sup>3</sup></div>
+			<div class="aqiBoxDetails">%.1f µg/m<sup>3</sup></div>
 		</div>
 
 		<div class="aqiBox %s">
 			<div class="aqiBoxTitle">PM 10.0</div>
 			<div class="aqiBoxAqi all-center">%d</div>
-			<div class="aqiBoxDetails">%d µg/m<sup>3</sup></div>
+			<div class="aqiBoxDetails">%.1f µg/m<sup>3</sup></div>
 		</div>
 	</div>
 
@@ -126,7 +126,7 @@ div.bonusText {
 
 	<div style="text-align:left">
 Uptime: %s<br />
-PMSA003:   particles/dL: >=0.3µm: %d >=0.5µm: %d >=1.0µm: %d >=2.5µm: %d >=5.0µm: %d >=10.0µm: %d
+PMSA003:   particles/dL: >=0.3µm: %.1f >=0.5µm: %.1f >=1.0µm: %.1f >=2.5µm: %.1f >=5.0µm: %.1f >=10.0µm: %.1f
 <br />
 MH-Z19C:    CO2:  %dppm  %d°C     %.1f°F
 <br />

@@ -1,11 +1,14 @@
-
 #include "dsco220.h"
 
 #include <Arduino.h>
+#include <esp_log.h>
 
 #include "pmsx003.h"
 
 namespace dsco220 {
+namespace {
+const char TAG[] = "dsco220";
+}  // namespace
 
 bool Read(TwoWire* i2c, Data* data) {
   while (i2c->available()) {
@@ -43,9 +46,14 @@ bool Read(TwoWire* i2c, Data* data) {
     return false;
   }
 
-  data->co2_ppm = (buffer[4] << 8) | buffer[5];
-  data->calibration_param1 = (buffer[6] << 8) | buffer[7];
-  data->calibration_param2 = (buffer[8] << 8) | buffer[9];
+  uint16_t co2_ppm = (buffer[4] << 8) | buffer[5];
+  if (co2_ppm > 300 && co2_ppm < 10000) {
+    data->co2_ppm = co2_ppm;
+    data->calibration_param1 = (buffer[6] << 8) | buffer[7];
+    data->calibration_param2 = (buffer[8] << 8) | buffer[9];
+  } else {
+    ESP_LOGW(TAG, "Outlier CO2: %d ppm", co2_ppm);
+  }
 
   return true;
 }

@@ -10,6 +10,9 @@ String MillisHumanReadable(unsigned long ms);
 
 float CToF(float temp_C);
 
+// alpha == 2 / (periods + 1)
+float Ewma(float new_value, float prev_ewma, int periods);
+
 }  // namespace dump
 
 #endif  // _DUMP_H_

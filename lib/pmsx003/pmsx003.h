@@ -14,16 +14,16 @@ struct TaskData {
   uint16_t pm25Raw;
   uint16_t pm10Raw;
 
-  uint16_t pm1;
-  uint16_t pm25;
-  uint16_t pm10;
+  float pm_1_0;
+  float pm_2_5;
+  float pm_10_0;
 
-  uint16_t particles_gt_0_3;
-  uint16_t particles_gt_0_5;
-  uint16_t particles_gt_1_0;
-  uint16_t particles_gt_2_5;
-  uint16_t particles_gt_5_0;
-  uint16_t particles_gt_10_0;
+  float particles_gt_0_3;
+  float particles_gt_0_5;
+  float particles_gt_1_0;
+  float particles_gt_2_5;
+  float particles_gt_5_0;
+  float particles_gt_10_0;
 };
 
 bool VerifyPacket(uint8_t* packet, int size);

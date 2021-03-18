@@ -91,4 +91,13 @@ String MillisHumanReadable(unsigned long ms) {
 
 float CToF(float temp_C) { return temp_C * 9 / 5 + 32; }
 
+float Ewma(float new_value, float prev_ewma, int periods) {
+  if (prev_ewma == 0.0) {
+    // Risky!
+    return new_value;
+  }
+
+  return prev_ewma + (new_value - prev_ewma) * 2 / float(periods + 1);
+}
+
 }  // namespace dump

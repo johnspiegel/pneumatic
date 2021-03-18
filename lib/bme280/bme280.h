@@ -10,8 +10,8 @@ struct Data {
   SemaphoreHandle_t i2c_mutex;
 
   float temp_c;
-  float pressurePa;
-  float humidityPercent;
+  float pressure_pa;
+  float humidity_pct;
 };
 
 void TaskPoll(void* task_data_param);
