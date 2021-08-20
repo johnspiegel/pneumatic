@@ -50,7 +50,7 @@ SemaphoreHandle_t i2c_mutex = nullptr;
 HardwareSerial pms_serial(2);
 pmsx003::TaskData pmsx003_data = {0};
 
-HardwareSerial mhz19_serial(1);
+// HardwareSerial mhz19_serial(1);
 mhz19::TaskData mhz19_data = {0};
 
 Adafruit_BME280 bme;
@@ -123,9 +123,11 @@ void setup() {
   Serial.print("setup(): e_fuse_mac: ");
   Serial.println(mac);
 
-  pixels.begin();
-  pixels.setPixelColor(0, pixels.Color(0, 0, 0));
-  pixels.show();
+  // ui::InitTft();
+
+  // pixels.begin();
+  // pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+  // pixels.show();
 
   // Serial.println("Setting up WiFi...");
   // net_manager::Setup();
@@ -141,16 +143,16 @@ void setup() {
   pmsx003_data.serial = &pms_serial;
   Serial.println("PMSx003 Serial online");
 
-  Serial.println("Setting up MH-Z19 Serial port...");
-  mhz19_serial.begin(9600, SERIAL_8N1, /*rx=*/MHZ19_RX_PIN,
-                     /*tx=*/MHZ19_TX_PIN);
-  while (!mhz19_serial) {
-    Serial.println("    ...");
-    delay(100);
-  }
-  Serial.println("MH-Z19 Serial online");
-  mhz19_data.serial = &mhz19_serial;
-  mhz19::SetAutoBackgroundCalibration(&mhz19_serial, /*abc_on=*/true);
+  // Serial.println("Setting up MH-Z19 Serial port...");
+  // mhz19_serial.begin(9600, SERIAL_8N1, /*rx=*/MHZ19_RX_PIN,
+  //                    /*tx=*/MHZ19_TX_PIN);
+  // while (!mhz19_serial) {
+  //   Serial.println("    ...");
+  //   delay(100);
+  // }
+  // Serial.println("MH-Z19 Serial online");
+  // mhz19_data.serial = &mhz19_serial;
+  // mhz19::SetAutoBackgroundCalibration(&mhz19_serial, /*abc_on=*/true);
 
   Serial.println("Setting up Plantower DS CO2..");
   Wire.begin();
@@ -188,11 +190,11 @@ void setup() {
               /*param=*/&pmsx003_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
-  xTaskCreate(mhz19::TaskPoll, "PollMhz19",
-              /*stack_size=*/10000,
-              /*param=*/&mhz19_data,
-              /*priority=*/next_priority++,
-              /*handle=*/nullptr);
+  // xTaskCreate(mhz19::TaskPoll, "PollMhz19",
+  //             /*stack_size=*/10000,
+  //             /*param=*/&mhz19_data,
+  //             /*priority=*/next_priority++,
+  //             /*handle=*/nullptr);
   xTaskCreate(dsco220::TaskPollDsCo2, "dsco220",
               /*stack_size=*/10000,
               /*param=*/&dsco220_task_data,
@@ -209,17 +211,17 @@ void setup() {
   ui_task_data.dsco220_data = &dsco220_data;
   ui_task_data.bme280_data = &bme280_data;
   ui_task_data.pixels = &pixels;
-  xTaskCreate(ui::TaskDoPixels, "TaskDoPixels",
-              /*stack_size=*/1024,
-              /*param=*/&ui_task_data,
-              /*priority=*/next_priority++,
-              /*handle=*/nullptr);
-  xTaskCreate(sensor_community::TaskSensorCommunity, "TaskSensorCommunity",
-              /*stack_size=*/4 * 1024,
-              /*param=*/&ui_task_data,
-              /*priority=*/next_priority++,
-              /*handle=*/nullptr);
-  xTaskCreate(ui::TaskDisplay, "TasDisplay",
+  // xTaskCreate(ui::TaskDoPixels, "TaskDoPixels",
+  //             /*stack_size=*/1024,
+  //             /*param=*/&ui_task_data,
+  //             /*priority=*/next_priority++,
+  //             /*handle=*/nullptr);
+  // xTaskCreate(sensor_community::TaskSensorCommunity, "TaskSensorCommunity",
+  //             /*stack_size=*/4 * 1024,
+  //             /*param=*/&ui_task_data,
+  //             /*priority=*/next_priority++,
+  //             /*handle=*/nullptr);
+  xTaskCreate(ui::TaskDisplay, "TaskDisplay",
               /*stack_size=*/16 * 1024,
               /*param=*/&ui_task_data,
               /*priority=*/next_priority++,
