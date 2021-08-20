@@ -527,10 +527,18 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
 }
 
 void TaskDisplay(void* task_data_arg) {
+  Serial.println("TaskDisplay: Starting task...");
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
   tft.init();
 
+  unsigned long last_print_time_ms = 0;
   for (;; delay(1000)) {
+    if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
+      ESP_LOGI(TAG, "TaskDisplay(): uptime: %s core: %d",
+               dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID());
+      last_print_time_ms = millis();
+    }
+
     int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_2_5);
     int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm_10_0);
 
@@ -592,6 +600,9 @@ void TaskServeWeb(void* task_data_arg) {
         ESP_LOGW(TAG, "TaskServeWeb: Waiting for WiFi...");
       }
       last_print_time_ms = millis();
+    }
+    if (!WiFi.isConnected()) {
+      continue;
     }
 
     // TODO: register for wifi disconnect signal to eliminate restart races.
