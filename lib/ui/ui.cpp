@@ -18,6 +18,7 @@ namespace ui {
 
 namespace {
 TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
+TFT_eSprite spr = TFT_eSprite(&tft);
 const char TAG[] = "ui";
 }  // namespace
 
@@ -531,10 +532,14 @@ void TaskDisplay(void* task_data_arg) {
   Serial.println("TaskDisplay: Starting task...");
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
   tft.init();
+  // Clockwise 90 degrees; t-display: USB and buttons to right, antenna to left.
   tft.setRotation(1);
+  spr.createSprite(/* width = */ 240, /* height= */ 135);
 
   unsigned long last_print_time_ms = 0;
-  for (;; delay(1000)) {
+  unsigned long last_display_time_ms = 0;
+  int delay_ms = 1000;
+  for (;; delay(delay_ms)) {
     if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
       ESP_LOGI(TAG, "TaskDisplay(): uptime: %s core: %d",
                dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID());
@@ -553,49 +558,32 @@ void TaskDisplay(void* task_data_arg) {
     // dummy += 10;
     const auto& aqi_cat = GetAqiCategory(max_aqi);
 
-    // uint16_t bgcolor = tft.color24to16(aqi_cat.web_color);
+    // Print AQI
     uint16_t bgcolor = tft.color24to16(aqi_cat.color);
     uint16_t fgcolor = tft.color24to16(FgColor(aqi_cat.color));
-    tft.fillScreen(bgcolor);
-    // Set "cursor" at top left corner of display (0,0) and select font 4
-    // tft.setCursor(5, 5, 4);
-    tft.setCursor(5, 30);
-    // Black on green text.
-    tft.setTextColor(fgcolor, bgcolor);
-    // tft.print("AQI: ");
-    tft.setTextDatum(TR_DATUM);
-    tft.setFreeFont(&FreeMonoBold9pt7b);
-    tft.drawString("AQI", 90, 5);
-    tft.setFreeFont(&FreeMonoBold24pt7b);
-    // tft.print(max_aqi);
-    // tft.drawString("AQI:", 5, 40);
-    // tft.drawNumber(max_aqi, 100, 20);
-    // tft.drawNumber(1337, 115, 30);
-    // tft.drawNumber(max_aqi, 115, 30);
-    tft.drawNumber(max_aqi, 100, 30);
-    // tft.println(aqi_cat.message);
-    // tft.println();
+    spr.fillRect(0, 0, 240, 135, bgcolor);
+    spr.setTextColor(fgcolor, bgcolor);
+    spr.setTextDatum(TR_DATUM);
+    spr.setFreeFont(&FreeMonoBold9pt7b);
+    spr.drawString("AQI", 90, 5);
+    spr.setFreeFont(&FreeMonoBold24pt7b);
+    spr.drawNumber(max_aqi, 100, 30);
 
-    tft.setCursor(120, 30);
+    // Print CO2 ppm
     const auto& co2_cat =
         GetAqiCategory(Aqi(aqi_co2, 0, task_data->dsco220_data->co2_ppm));
-    tft.fillRect(120, 0, 240, 75, tft.color24to16(co2_cat.color));
-    tft.setTextColor(tft.color24to16(FgColor(co2_cat.color)));
-    // tft.setTextColor(tft.color24to16(FgColor(co2_cat.color)),
-                     // tft.color24to16(co2_cat.color));
-    tft.setFreeFont(&FreeMonoBold9pt7b);
-    tft.drawString("CO2", 210, 5);
-    // tft.print("CO2: ");
-    tft.setFreeFont(&FreeMonoBold24pt7b);
-    // tft.print(task_data->dsco220_data->co2_ppm);
-    tft.drawNumber(task_data->dsco220_data->co2_ppm, 235, 30);
-    // tft.drawNumber(1337, 235, 30);
-    // tft.print(" ppm\n");
-    // tft.print("\n");
-    // tft.println();
-    tft.setFreeFont(&FreeMonoBold9pt7b);
-    tft.setCursor(5, 94);
-    tft.print("SSID: ");
+    spr.fillRect(120, 0, 120, 75, tft.color24to16(co2_cat.color));
+    spr.setTextColor(tft.color24to16(FgColor(co2_cat.color)));
+    spr.setFreeFont(&FreeMonoBold9pt7b);
+    spr.drawString("CO2", 210, 5);
+    spr.setFreeFont(&FreeMonoBold24pt7b);
+    spr.drawNumber(task_data->dsco220_data->co2_ppm, 235, 30);
+
+    // Print status info at the bottom
+    spr.setFreeFont(&FreeMonoBold9pt7b);
+    spr.setTextColor(fgcolor, bgcolor);
+    spr.setCursor(5, 94);
+    spr.print("SSID: ");
     auto ssid = WiFi.SSID();
     auto ip = WiFi.localIP();
     if (ssid.isEmpty() && WiFi.getMode() != WIFI_STA) {
@@ -607,13 +595,32 @@ void TaskDisplay(void* task_data_arg) {
     } else if (ssid.isEmpty()) {
       ssid = "connecting...";
     }
-    tft.println(ssid);
-    tft.setCursor(5, 112);
-    tft.print("IP: ");
-    tft.println(WiFi.localIP().toString());
-    tft.setTextColor(fgcolor, bgcolor);
-    tft.setCursor(5, 129);
-    tft.print("up: " + dump::SecondsHumanReadable(millis()));
+    spr.println(ssid);
+    spr.setCursor(5, 112);
+    spr.print("IP: ");
+    spr.println(WiFi.localIP().toString());
+    spr.setTextColor(fgcolor, bgcolor);
+    spr.setCursor(5, 129);
+    last_display_time_ms = millis();
+    spr.print("up: " + dump::SecondsHumanReadable(last_display_time_ms));
+    
+    // Write to screen
+    spr.pushSprite(0, 0);
+
+    delay_ms = std::max<int>(
+        0,
+        // truncate to previous second
+        (last_display_time_ms / 1000) * 1000
+            // add one second
+            + 1000
+            // subract the current time
+            - millis()
+            // Add one tick to make sure we arrive after the second rolls
+            + 10);
+    ESP_LOGI(TAG,
+             "TaskDisplay(): uptime: %s last_display_time_ms: %ld delay_ms: %d",
+             dump::MillisHumanReadable(millis()).c_str(), last_display_time_ms,
+             delay_ms);
   }
   vTaskDelete(NULL);
 }
