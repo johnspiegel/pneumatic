@@ -1,7 +1,8 @@
 #ifndef _DSCO220_H_
 #define _DSCO220_H_
 
-#include <FreeRTOS.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <Stream.h>
 #include <Wire.h>
 

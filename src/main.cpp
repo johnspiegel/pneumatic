@@ -1,7 +1,7 @@
 #include <Adafruit_BME280.h>
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
-#include <FreeRTOS.h>
+#include <freertos/FreeRTOS.h>
 #include <HardwareSerial.h>
 #include <Wire.h>
 #include <esp_log.h>
