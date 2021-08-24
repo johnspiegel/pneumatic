@@ -5,6 +5,7 @@
 #include <WiFiServer.h>
 #include <dump.h>
 #include <esp_log.h>
+#include <esp_wifi.h>
 
 #include "html.h"
 
@@ -530,6 +531,7 @@ void TaskDisplay(void* task_data_arg) {
   Serial.println("TaskDisplay: Starting task...");
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
   tft.init();
+  tft.setRotation(1);
 
   unsigned long last_print_time_ms = 0;
   for (;; delay(1000)) {
@@ -556,25 +558,62 @@ void TaskDisplay(void* task_data_arg) {
     uint16_t fgcolor = tft.color24to16(FgColor(aqi_cat.color));
     tft.fillScreen(bgcolor);
     // Set "cursor" at top left corner of display (0,0) and select font 4
-    tft.setCursor(5, 5, 4);
+    // tft.setCursor(5, 5, 4);
+    tft.setCursor(5, 30);
     // Black on green text.
     tft.setTextColor(fgcolor, bgcolor);
-    tft.print("AQI: ");
-    tft.println(max_aqi);
-    tft.println(aqi_cat.message);
-    tft.println();
+    // tft.print("AQI: ");
+    tft.setTextDatum(TR_DATUM);
+    tft.setFreeFont(&FreeMonoBold9pt7b);
+    tft.drawString("AQI", 90, 5);
+    tft.setFreeFont(&FreeMonoBold24pt7b);
+    // tft.print(max_aqi);
+    // tft.drawString("AQI:", 5, 40);
+    // tft.drawNumber(max_aqi, 100, 20);
+    // tft.drawNumber(1337, 115, 30);
+    // tft.drawNumber(max_aqi, 115, 30);
+    tft.drawNumber(max_aqi, 100, 30);
+    // tft.println(aqi_cat.message);
+    // tft.println();
 
+    tft.setCursor(120, 30);
     const auto& co2_cat =
         GetAqiCategory(Aqi(aqi_co2, 0, task_data->dsco220_data->co2_ppm));
-    tft.setTextColor(tft.color24to16(FgColor(co2_cat.color)),
-                     tft.color24to16(co2_cat.color));
-    tft.print("CO2: ");
-    tft.println(task_data->dsco220_data->co2_ppm);
+    tft.fillRect(120, 0, 240, 75, tft.color24to16(co2_cat.color));
+    tft.setTextColor(tft.color24to16(FgColor(co2_cat.color)));
+    // tft.setTextColor(tft.color24to16(FgColor(co2_cat.color)),
+                     // tft.color24to16(co2_cat.color));
+    tft.setFreeFont(&FreeMonoBold9pt7b);
+    tft.drawString("CO2", 210, 5);
+    // tft.print("CO2: ");
+    tft.setFreeFont(&FreeMonoBold24pt7b);
+    // tft.print(task_data->dsco220_data->co2_ppm);
+    tft.drawNumber(task_data->dsco220_data->co2_ppm, 235, 30);
+    // tft.drawNumber(1337, 235, 30);
     // tft.print(" ppm\n");
-    tft.println();
+    // tft.print("\n");
+    // tft.println();
+    tft.setFreeFont(&FreeMonoBold9pt7b);
+    tft.setCursor(5, 94);
+    tft.print("SSID: ");
+    auto ssid = WiFi.SSID();
+    auto ip = WiFi.localIP();
+    if (ssid.isEmpty() && WiFi.getMode() != WIFI_STA) {
+      wifi_config_t config = {0};
+      esp_wifi_get_config(WIFI_IF_AP, &config);
+      // ssid = WiFi.softAPSSID();
+      ssid = reinterpret_cast<const char*>(config.ap.ssid);
+      ip = WiFi.softAPIP();
+    } else if (ssid.isEmpty()) {
+      ssid = "connecting...";
+    }
+    tft.println(ssid);
+    tft.setCursor(5, 112);
+    tft.print("IP: ");
+    tft.println(WiFi.localIP().toString());
     tft.setTextColor(fgcolor, bgcolor);
-    tft.println("uptime: ");
-    tft.println(dump::SecondsHumanReadable(millis()).c_str());
+    tft.setCursor(5, 129);
+    tft.print("up: " + dump::SecondsHumanReadable(millis()));
   }
   vTaskDelete(NULL);
 }
