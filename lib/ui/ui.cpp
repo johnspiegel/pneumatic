@@ -617,7 +617,7 @@ void TaskDisplay(void* task_data_arg) {
             - millis()
             // Add one tick to make sure we arrive after the second rolls
             + 10);
-    ESP_LOGI(TAG,
+    ESP_LOGV(TAG,
              "TaskDisplay(): uptime: %s last_display_time_ms: %ld delay_ms: %d",
              dump::MillisHumanReadable(millis()).c_str(), last_display_time_ms,
              delay_ms);
