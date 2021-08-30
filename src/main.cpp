@@ -16,6 +16,7 @@
 #include "pmsx003.h"
 #include "sensor_community.h"
 #include "ui.h"
+#include "ota.h"
 
 #ifndef LED_BUILTIN
 
@@ -229,6 +230,11 @@ void setup() {
   xTaskCreate(ui::TaskServeWeb, "TaskServeWeb",
               /*stack_size=*/16 * 1024,
               /*param=*/&ui_task_data,
+              /*priority=*/next_priority++,
+              /*handle=*/nullptr);
+  xTaskCreate(ota::TaskOta, "TaskOta",
+              /*stack_size=*/8 * 1024,
+              /*param=*/nullptr,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(net_manager::DoTask, "NetManager",
