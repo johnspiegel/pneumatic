@@ -1,31 +1,29 @@
 #include <Adafruit_BME280.h>
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
-#include <freertos/FreeRTOS.h>
 #include <HardwareSerial.h>
 #include <Wire.h>
 #include <esp_log.h>
 #include <esp_sntp.h>
+#include <freertos/FreeRTOS.h>
 
 #include "bme280.h"
+#include "constants.h"
 #include "dsco220.h"
 #include "dump.h"
 #include "html.h"
 #include "mhz19.h"
 #include "net_manager.h"
+#include "ota.h"
 #include "pmsx003.h"
 #include "sensor_community.h"
 #include "ui.h"
-#include "ota.h"
 
 #ifndef LED_BUILTIN
-
 // ESP32 Dev Kit
 #define LED_BUILTIN 2
-
 // Heltec wifi kit 32
 // #define LED_BUILTIN 25
-
 #endif
 
 #define WS2812B_PIN 25
@@ -44,7 +42,7 @@
 // TODO: acutally use ds-co2-20 address
 #define DSCO220_I2C_ADDRESS 0x08
 
-static const char* TAG = "AirGadgetMain";
+static const char* TAG = "main";
 
 SemaphoreHandle_t i2c_mutex = nullptr;
 
@@ -95,16 +93,16 @@ void i2cScan() {
 }
 
 void setup() {
+  ESP_LOGI(TAG, "setup(): version: [%s] core: %d", kPneumaticVersion,
+           xPortGetCoreID());
+
   // initialize LED digital pin as an output.
   pinMode(LED_BUILTIN, OUTPUT);
 
   Serial.begin(115200);
   while (!Serial)
     ;
-  Serial.println("Serial online");
-
-  Serial.print("setup(): core: ");
-  Serial.println(xPortGetCoreID());
+  Serial.println("Arduino Serial online");
 
   // This chipid is the mac address, but reversed? I'll just use the actual mac
   // address.

@@ -8,6 +8,7 @@
 #include <esp_wifi.h>
 
 #include "html.h"
+#include "constants.h"
 
 #define BUTTON_1 35
 #define BUTTON_2 0
@@ -553,9 +554,6 @@ void TaskDisplay(void* task_data_arg) {
     if (pm10aqi > pm25aqi) {
       max_aqi = pm10aqi;
     }
-    // static int dummy = 0;
-    // max_aqi += dummy;
-    // dummy += 10;
     const auto& aqi_cat = GetAqiCategory(max_aqi);
 
     // Print AQI
@@ -580,29 +578,30 @@ void TaskDisplay(void* task_data_arg) {
     spr.drawNumber(task_data->dsco220_data->co2_ppm, 235, 30);
 
     // Print status info at the bottom
+    spr.setTextDatum(BL_DATUM);
     spr.setFreeFont(&FreeMonoBold9pt7b);
     spr.setTextColor(fgcolor, bgcolor);
-    spr.setCursor(5, 94);
-    spr.print("SSID: ");
-    auto ssid = WiFi.SSID();
-    auto ip = WiFi.localIP();
-    if (ssid.isEmpty() && WiFi.getMode() != WIFI_STA) {
+    // Wifi SSID
+    std::string ssid = WiFi.SSID().c_str();
+    if (ssid.empty() && WiFi.getMode() != WIFI_STA) {
       wifi_config_t config = {0};
       esp_wifi_get_config(WIFI_IF_AP, &config);
-      // ssid = WiFi.softAPSSID();
-      ssid = reinterpret_cast<const char*>(config.ap.ssid);
-      ip = WiFi.softAPIP();
-    } else if (ssid.isEmpty()) {
+      ssid.assign(reinterpret_cast<const char*>(config.ap.ssid),
+                  strnlen(reinterpret_cast<const char*>(config.ap.ssid),
+                          sizeof(config.ap.ssid)));
+    } else if (ssid.empty()) {
       ssid = "connecting...";
     }
-    spr.println(ssid);
-    spr.setCursor(5, 112);
-    spr.print("IP: ");
-    spr.println(WiFi.localIP().toString());
-    spr.setTextColor(fgcolor, bgcolor);
-    spr.setCursor(5, 129);
+    spr.drawString(("SSID: " + ssid).c_str(), 5, 99);
+    // Wifi IP Address
+    spr.drawString("IP: " + WiFi.localIP().toString(), 5, 116);
+    // uptime
     last_display_time_ms = millis();
-    spr.print("up: " + dump::SecondsHumanReadable(last_display_time_ms));
+    spr.drawString("up: " + dump::SecondsHumanReadable(last_display_time_ms),
+                   5, 133);
+    spr.setTextDatum(BR_DATUM);
+    // version string
+    spr.drawString(kPneumaticVersion, 235, 133);
     
     // Write to screen
     spr.pushSprite(0, 0);
