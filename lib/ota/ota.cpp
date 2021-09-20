@@ -14,6 +14,45 @@
 namespace ota {
 namespace {
 const char TAG[] = "ota";
+
+std::vector<char> http_buf;
+int http_buf_offset = 0;
+
+esp_err_t HandleHttpEvent(esp_http_client_event_t* evt) {
+  switch (evt->event_id) {
+    case HTTP_EVENT_ERROR:
+      ESP_LOGI(TAG, "HTTP_EVENT_ERROR");
+      break;
+    case HTTP_EVENT_ON_CONNECTED:
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
+      break;
+    case HTTP_EVENT_HEADER_SENT:
+      ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
+      break;
+    case HTTP_EVENT_ON_HEADER:
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER");
+      printf("%.*s", evt->data_len, (char*)evt->data);
+      break;
+    case HTTP_EVENT_ON_DATA:
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+      if (esp_http_client_is_chunked_response(evt->client)) {
+        ESP_LOGW(TAG, "chunked response!");
+      }
+      http_buf.resize(http_buf_offset + evt->data_len + 1);
+      memcpy(&http_buf[http_buf_offset], evt->data, evt->data_len);
+      http_buf_offset += evt->data_len;
+      http_buf[http_buf_offset] = '\0';
+      break;
+    case HTTP_EVENT_ON_FINISH:
+      ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
+      break;
+    case HTTP_EVENT_DISCONNECTED:
+      ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
+      break;
+  }
+  return ESP_OK;
+};
+
 }  // namespace
 
 void TaskOta(void* unused) {
@@ -50,35 +89,31 @@ void TaskOta(void* unused) {
     ESP_LOGI(TAG, "Fetching Releases...");
     bool do_update = true;
 
+    http_buf.resize(0);
+    http_buf_offset = 0;
     esp_http_client_config_t http_config{
         .url = kReleasesUrl,
         .cert_pem = kCaPem,
+        // .event_handler = http_event_handler,
+        .event_handler = HandleHttpEvent,
     };
     esp_http_client_handle_t client = esp_http_client_init(&http_config);
+    ESP_LOGE(TAG, "http buffer size: %d", http_config.buffer_size);
     esp_err_t err = esp_http_client_perform(client);
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "http error = %s", esp_err_to_name(err));
       esp_http_client_cleanup(client);
       continue;
     }
-
-    int content_length = esp_http_client_get_content_length(client);
-    std::vector<char> buf(content_length + 1, '\0');
-    int offset = 0;
-    while (offset < content_length) {
-      int bytes_read = esp_http_client_read(client, &buf[offset], buf.size() - offset);
-      ESP_LOGI(TAG, "content_length = %d offset = %d bytes_read = %d",
-               content_length, offset, bytes_read);
-      offset += bytes_read;
-    }
-    ESP_LOGI(TAG, "content_length = %d, total bytes_read = %d, content =\n%s",
-             content_length, offset, &buf.front());
     esp_http_client_cleanup(client);
+
+    ESP_LOGI(TAG, "http_buf.size() = %d", http_buf.size());
+    ESP_LOGI(TAG, "http_buf =\n%s", &http_buf.front());
 
     StaticJsonDocument<128> json_filter;
     json_filter["releases"][kDeviceConfig] = true;
     StaticJsonDocument<256> json_doc;
-    auto json_err = deserializeJson(json_doc, &buf.front(), DeserializationOption::Filter(json_filter));
+    auto json_err = deserializeJson(json_doc, &http_buf.front(), DeserializationOption::Filter(json_filter));
     if (json_err) {
       ESP_LOGE(TAG, "deserializeJson() failed: %s", json_err.c_str());
       continue;
@@ -86,10 +121,10 @@ void TaskOta(void* unused) {
 
     const char* url = json_doc["releases"][kDeviceConfig]["url"];
     if (!url) {
-      ESP_LOGE(TAG, "no url found!");
+      ESP_LOGE(TAG, "no url found for device: %s", kDeviceConfig);
       continue;
     }
-    ESP_LOGI(TAG, "Firmware url: %s", url);
+    ESP_LOGI(TAG, "Firmware url: %s (kDeviceConfig: %s)", url, kDeviceConfig);
     bool update_at_boot = json_doc["releases"][kDeviceConfig]["update_at_boot"];
     ESP_LOGI(TAG, "update_at_boot: %s", update_at_boot ? "true" : "false");
 
