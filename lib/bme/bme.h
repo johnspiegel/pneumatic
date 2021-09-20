@@ -1,5 +1,5 @@
-#ifndef _BME280_H_
-#define _BME280_H_
+#ifndef _BME_H_
+#define _BME_H_
 
 // TODO: rename this BMEx80
 
@@ -10,7 +10,7 @@
 
 #define BME280_I2C_ADDRESS 0x76
 
-namespace bme280 {
+namespace bme {
 
 struct Data {
   SemaphoreHandle_t i2c_mutex;
@@ -28,6 +28,6 @@ bool Init(Data* data);
 
 void TaskPoll(void* task_data_param);
 
-}  // namespace bme280
+}  // namespace bme
 
-#endif  // _BME280_H_
+#endif  // _BME_H_

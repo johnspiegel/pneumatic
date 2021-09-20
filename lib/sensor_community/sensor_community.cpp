@@ -75,9 +75,9 @@ bool Push(const ui::TaskData* data) {
             ]
         })";
   payload.replace("{software_version}", kSoftwareVersion);
-  payload.replace("{temperature}", String(data->bme280_data->temp_c));
-  payload.replace("{humidity}", String(data->bme280_data->humidity_pct));
-  payload.replace("{pressure}", String(data->bme280_data->pressure_pa));
+  payload.replace("{temperature}", String(data->bme_data->temp_c));
+  payload.replace("{humidity}", String(data->bme_data->humidity_pct));
+  payload.replace("{pressure}", String(data->bme_data->pressure_pa));
 
   // Serial.print("SensorCommunity: Payload:\n");
   // Serial.print(payload);

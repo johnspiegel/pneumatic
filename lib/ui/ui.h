@@ -4,7 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <stdint.h>
 
-#include "bme280.h"
+#include "bme.h"
 #include "dsco220.h"
 #include "mhz19.h"
 #include "pmsx003.h"
@@ -15,7 +15,7 @@ struct TaskData {
   pmsx003::TaskData* pmsx003_data;
   mhz19::TaskData* mhz19_data;
   dsco220::Data* dsco220_data;
-  bme280::Data* bme280_data;
+  bme::Data* bme_data;
   Adafruit_NeoPixel* pixels;
 };
 

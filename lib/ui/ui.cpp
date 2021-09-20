@@ -417,10 +417,10 @@ void DoStatusz(WiFiClient* client, const TaskData* task_data) {
            Co2Tag(task_data->dsco220_data->co2_ppm),
            task_data->dsco220_data->co2_ppm,
            // Temp/Humidity/Pressure
-           task_data->bme280_data->temp_c,
-           dump::CToF(task_data->bme280_data->temp_c),
-           task_data->bme280_data->humidity_pct,
-           task_data->bme280_data->pressure_pa / 100.0,
+           task_data->bme_data->temp_c,
+           dump::CToF(task_data->bme_data->temp_c),
+           task_data->bme_data->humidity_pct,
+           task_data->bme_data->pressure_pa / 100.0,
 
            // Bottom details
            dump::MillisHumanReadable(millis()).c_str(),
@@ -434,10 +434,10 @@ void DoStatusz(WiFiClient* client, const TaskData* task_data) {
            dump::CToF(task_data->mhz19_data->temp_c),
            task_data->dsco220_data->co2_ppm,
            // BMEx80
-           task_data->bme280_data->sensor_name, task_data->bme280_data->temp_c,
-           dump::CToF(task_data->bme280_data->temp_c),
-           task_data->bme280_data->pressure_pa,
-           task_data->bme280_data->humidity_pct);
+           task_data->bme_data->sensor_name, task_data->bme_data->temp_c,
+           dump::CToF(task_data->bme_data->temp_c),
+           task_data->bme_data->pressure_pa,
+           task_data->bme_data->humidity_pct);
   client->print(buf);
 
   client->print("\n");
@@ -524,13 +524,13 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
                               task_data->mhz19_data->temp_c));
 
   std::string bme_fields("sensor=");
-  bme_fields += task_data->bme280_data->sensor_name;
+  bme_fields += task_data->bme_data->sensor_name;
   client->print(MetricLineDouble("temp_c", bme_fields.c_str(),
-                                 task_data->bme280_data->temp_c));
+                                 task_data->bme_data->temp_c));
   client->print(MetricLineDouble("pressure_pa", bme_fields.c_str(),
-                                 task_data->bme280_data->pressure_pa));
+                                 task_data->bme_data->pressure_pa));
   client->print(MetricLineDouble("humidity_percent", bme_fields.c_str(),
-                                 task_data->bme280_data->humidity_pct));
+                                 task_data->bme_data->humidity_pct));
 }
 
 void TaskDisplay(void* task_data_arg) {

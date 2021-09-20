@@ -6,7 +6,7 @@
 #include <esp_sntp.h>
 #include <freertos/FreeRTOS.h>
 
-#include "bme280.h"
+#include "bme.h"
 #include "constants.h"
 #include "dsco220.h"
 #include "dump.h"
@@ -57,7 +57,7 @@ pmsx003::TaskData pmsx003_data = {0};
 // HardwareSerial mhz19_serial(1);
 mhz19::TaskData mhz19_data = {0};
 
-bme280::Data bme280_data = {0};
+bme::Data bme_data = {0};
 
 dsco220::Data dsco220_data = {0};
 dsco220::TaskData dsco220_task_data = {0};
@@ -170,8 +170,8 @@ void setup() {
   dsco220_task_data.data = &dsco220_data;
 
   ESP_LOGI(TAG, "Setting up BMEx8x...");
-  bme280_data.i2c_mutex = i2c_mutex;
-  bme280::Init(&bme280_data);
+  bme_data.i2c_mutex = i2c_mutex;
+  bme::Init(&bme_data);
 
   ESP_LOGI(TAG, "Initializing NTP");
   sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -200,16 +200,16 @@ void setup() {
               /*param=*/&dsco220_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
-  xTaskCreate(bme280::TaskPoll, "bme280",
+  xTaskCreate(bme::TaskPoll, "bme",
               /*stack_size=*/10000,
-              /*param=*/&bme280_data,
+              /*param=*/&bme_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
 
   ui_task_data.pmsx003_data = &pmsx003_data;
   ui_task_data.mhz19_data = &mhz19_data;
   ui_task_data.dsco220_data = &dsco220_data;
-  ui_task_data.bme280_data = &bme280_data;
+  ui_task_data.bme_data = &bme_data;
   ui_task_data.pixels = &pixels;
   // xTaskCreate(ui::TaskDoPixels, "TaskDoPixels",
   //             /*stack_size=*/1024,
