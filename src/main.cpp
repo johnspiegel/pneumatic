@@ -1,4 +1,3 @@
-#include <Adafruit_BME280.h>
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <HardwareSerial.h>
@@ -38,6 +37,12 @@
 
 #define MHZ19_RX_PIN 33
 #define MHZ19_TX_PIN 32
+
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
+// My BME680 seems unstable at 100khz.
+#define I2C_FREQ 20000
+
 #define BME280_I2C_ADDRESS 0x76
 // TODO: acutally use ds-co2-20 address
 #define DSCO220_I2C_ADDRESS 0x08
@@ -52,7 +57,6 @@ pmsx003::TaskData pmsx003_data = {0};
 // HardwareSerial mhz19_serial(1);
 mhz19::TaskData mhz19_data = {0};
 
-Adafruit_BME280 bme;
 bme280::Data bme280_data = {0};
 
 dsco220::Data dsco220_data = {0};
@@ -153,24 +157,21 @@ void setup() {
   // mhz19_data.serial = &mhz19_serial;
   // mhz19::SetAutoBackgroundCalibration(&mhz19_serial, /*abc_on=*/true);
 
-  Serial.println("Setting up Plantower DS CO2..");
-  Wire.begin();
-  i2cScan();
+  ESP_LOGI(TAG, "Initializing I2C bus...");
   i2c_mutex = xSemaphoreCreateMutex();
+  Wire.begin(/* sda= */ I2C_SDA_PIN,
+             /* scl= */ I2C_SCL_PIN,
+             /* frequencey= */ I2C_FREQ);
+  i2cScan();
+
+  ESP_LOGI(TAG, "Setting up Plantower DS CO2...");
   dsco220_task_data.i2c_mutex = i2c_mutex;
   dsco220_task_data.i2c = &Wire;
   dsco220_task_data.data = &dsco220_data;
 
-  if (!bme.begin(BME280_I2C_ADDRESS)) {
-    Serial.print("ERROR: no BME280 found\n");
-  } else {
-    Serial.println("BME280 initialized.");
-  }
-  bme.getTemperatureSensor()->printSensorDetails();
-  bme.getPressureSensor()->printSensorDetails();
-  bme.getHumiditySensor()->printSensorDetails();
+  ESP_LOGI(TAG, "Setting up BMEx8x...");
   bme280_data.i2c_mutex = i2c_mutex;
-  bme280_data.bme280 = &bme;
+  bme280::Init(&bme280_data);
 
   ESP_LOGI(TAG, "Initializing NTP");
   sntp_setoperatingmode(SNTP_OPMODE_POLL);

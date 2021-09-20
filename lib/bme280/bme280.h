@@ -1,18 +1,30 @@
 #ifndef _BME280_H_
 #define _BME280_H_
 
+// TODO: rename this BMEx80
+
+#include <memory>
+
 #include <Adafruit_BME280.h>
+#include <bsec.h>
+
+#define BME280_I2C_ADDRESS 0x76
 
 namespace bme280 {
 
 struct Data {
-  Adafruit_BME280* bme280;
   SemaphoreHandle_t i2c_mutex;
 
+  std::unique_ptr<Adafruit_BME280> bme280;
+  std::unique_ptr<Bsec> bsec;
+
+  const char* sensor_name;
   float temp_c;
   float pressure_pa;
   float humidity_pct;
 };
+
+bool Init(Data* data);
 
 void TaskPoll(void* task_data_param);
 

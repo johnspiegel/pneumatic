@@ -126,13 +126,13 @@ div.bonusText {
 
 	<div style="text-align:left">
 Uptime: %s<br />
-PMSA003:   particles/dL: >=0.3µm: %.1f >=0.5µm: %.1f >=1.0µm: %.1f >=2.5µm: %.1f >=5.0µm: %.1f >=10.0µm: %.1f
+PMSA003:    particles/dL: >=0.3µm: %.1f >=0.5µm: %.1f >=1.0µm: %.1f >=2.5µm: %.1f >=5.0µm: %.1f >=10.0µm: %.1f
 <br />
 MH-Z19C:    CO2:  %dppm  %d°C     %.1f°F
 <br />
 DS-020-20:  CO2: %dppm 
 <br />
-BME280:                   %.2f°C  %.2f°F  %.2f Pa  RH: %.2f%%
+%s:         %.2f°C  %.2f°F  %.2f Pa  RH: %.2f%%
 <br />
 	</div>
 

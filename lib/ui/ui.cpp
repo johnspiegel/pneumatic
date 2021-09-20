@@ -432,7 +432,9 @@ void DoStatusz(WiFiClient* client, const TaskData* task_data) {
            task_data->pmsx003_data->particles_gt_10_0,
            task_data->mhz19_data->co2_ppm, task_data->mhz19_data->temp_c,
            dump::CToF(task_data->mhz19_data->temp_c),
-           task_data->dsco220_data->co2_ppm, task_data->bme280_data->temp_c,
+           task_data->dsco220_data->co2_ppm,
+           // BMEx80
+           task_data->bme280_data->sensor_name, task_data->bme280_data->temp_c,
            dump::CToF(task_data->bme280_data->temp_c),
            task_data->bme280_data->pressure_pa,
            task_data->bme280_data->humidity_pct);
@@ -521,11 +523,13 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
   client->print(MetricLineInt("temp_c", R"(sensor="MH-Z19C")",
                               task_data->mhz19_data->temp_c));
 
-  client->print(MetricLineDouble("temp_c", R"(sensor="BME280")",
+  std::string bme_fields("sensor=");
+  bme_fields += task_data->bme280_data->sensor_name;
+  client->print(MetricLineDouble("temp_c", bme_fields.c_str(),
                                  task_data->bme280_data->temp_c));
-  client->print(MetricLineDouble("pressure_pa", R"(sensor="BME280")",
+  client->print(MetricLineDouble("pressure_pa", bme_fields.c_str(),
                                  task_data->bme280_data->pressure_pa));
-  client->print(MetricLineDouble("humidity_percent", R"(sensor="BME280")",
+  client->print(MetricLineDouble("humidity_percent", bme_fields.c_str(),
                                  task_data->bme280_data->humidity_pct));
 }
 
