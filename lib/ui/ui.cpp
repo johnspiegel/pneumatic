@@ -560,9 +560,14 @@ void TaskDisplay(void* task_data_arg) {
     }
     const auto& aqi_cat = GetAqiCategory(max_aqi);
 
+    auto dim = [](uint16_t color565) {
+      // 0 is all black, 255 is not dimmed at all.
+      return tft.alphaBlend(255, color565, TFT_BLACK);
+    };
+
     // Print AQI
-    uint16_t bgcolor = tft.color24to16(aqi_cat.color);
-    uint16_t fgcolor = tft.color24to16(FgColor(aqi_cat.color));
+    uint16_t bgcolor = dim(tft.color24to16(aqi_cat.color));
+    uint16_t fgcolor = dim(tft.color24to16(FgColor(aqi_cat.color)));
     spr.fillRect(0, 0, 240, 135, bgcolor);
     spr.setTextColor(fgcolor, bgcolor);
     spr.setTextDatum(TR_DATUM);
@@ -574,8 +579,8 @@ void TaskDisplay(void* task_data_arg) {
     // Print CO2 ppm
     const auto& co2_cat =
         GetAqiCategory(Aqi(aqi_co2, 0, task_data->dsco220_data->co2_ppm));
-    spr.fillRect(120, 0, 120, 75, tft.color24to16(co2_cat.color));
-    spr.setTextColor(tft.color24to16(FgColor(co2_cat.color)));
+    spr.fillRect(120, 0, 120, 75, dim(tft.color24to16(co2_cat.color)));
+    spr.setTextColor(dim(tft.color24to16(FgColor(co2_cat.color))));
     spr.setFreeFont(&FreeMonoBold9pt7b);
     spr.drawString("CO2", 210, 5);
     spr.setFreeFont(&FreeMonoBold24pt7b);
