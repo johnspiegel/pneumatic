@@ -94,7 +94,6 @@ void TaskOta(void* unused) {
     esp_http_client_config_t http_config{
         .url = kReleasesUrl,
         .cert_pem = kCaPem,
-        // .event_handler = http_event_handler,
         .event_handler = HandleHttpEvent,
     };
     esp_http_client_handle_t client = esp_http_client_init(&http_config);
@@ -155,6 +154,7 @@ void TaskOta(void* unused) {
     }
 
     http_config.url = url;
+    http_config.event_handler = nullptr;
 
     // TODO(jbs): check if it's the factory partition before marking?
     err = esp_ota_mark_app_valid_cancel_rollback();

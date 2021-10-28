@@ -523,8 +523,8 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
   client->print(MetricLineInt("temp_c", R"(sensor="MH-Z19C")",
                               task_data->mhz19_data->temp_c));
 
-  std::string bme_fields("sensor=");
-  bme_fields += task_data->bme_data->sensor_name;
+  std::string bme_fields =
+      std::string(R"(sensor=")") + task_data->bme_data->sensor_name + R"(")";
   client->print(MetricLineDouble("temp_c", bme_fields.c_str(),
                                  task_data->bme_data->temp_c));
   client->print(MetricLineDouble("pressure_pa", bme_fields.c_str(),

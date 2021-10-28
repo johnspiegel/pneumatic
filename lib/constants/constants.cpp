@@ -1,6 +1,6 @@
 #include "constants.h"
 
-const char* kPneumaticVersion = "v0.1.0";
+const char* kPneumaticVersion = "v0.1.1";
 const char* kReleasesUrl = "https://dev.jspiegel.net/pneumatic/releases.json";
 const char* kDeviceConfig = "tdisplay";
 
