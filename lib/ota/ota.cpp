@@ -66,10 +66,12 @@ void TaskOta(void* unused) {
   for (;; delay(delay_ms)) {
     if ((millis() - last_print_time_ms) > 60 * 1000 || !last_print_time_ms) {
       ESP_LOGI(
-          TAG, "TaskOta(): uptime: %s next update in: %s core: %d",
+          TAG,
+          "TaskOta(): uptime: %s next update in: %s "
+          "core: %d stackHighWater: %d",
           dump::MillisHumanReadable(millis()).c_str(),
           dump::MillisHumanReadable(next_update_time_ms - millis()).c_str(),
-          xPortGetCoreID());
+          xPortGetCoreID(), uxTaskGetStackHighWaterMark(nullptr));
       if (!WiFi.isConnected()) {
         ESP_LOGW(TAG, "TaskOta: Waiting for WiFi...");
       }
@@ -179,7 +181,8 @@ void TaskOta(void* unused) {
       continue;
     }
 
-    ESP_LOGW(TAG, "Successfully updated OTA. Restarting...");
+    ESP_LOGW(TAG, "Successfully updated OTA, stackHighWater: %d, Restarting...",
+             uxTaskGetStackHighWaterMark(nullptr));
     delay(100);
     esp_restart();
   }

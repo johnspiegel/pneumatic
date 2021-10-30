@@ -233,6 +233,7 @@ void setup() {
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(ota::TaskOta, "TaskOta",
+              // Note: 4484 bytes of stack used to do an OTA on v0.2.0
               /*stack_size=*/8 * 1024,
               /*param=*/nullptr,
               /*priority=*/next_priority++,
