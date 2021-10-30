@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include <Wire.h>
+#include <esp_heap_caps.h>
 #include <esp_log.h>
 #include <esp_sntp.h>
 #include <freertos/FreeRTOS.h>
@@ -186,7 +187,7 @@ void setup() {
   // same priority without the possibility of starvation.
   int next_priority = 2;
   xTaskCreate(pmsx003::TaskPoll, "pmsx003",
-              /*stack_size=*/10000,
+              /*stack_size=*/3 * 1024,
               /*param=*/&pmsx003_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
@@ -196,12 +197,12 @@ void setup() {
   //             /*priority=*/next_priority++,
   //             /*handle=*/nullptr);
   xTaskCreate(dsco220::TaskPollDsCo2, "dsco220",
-              /*stack_size=*/10000,
+              /*stack_size=*/3 * 1024,
               /*param=*/&dsco220_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(bme::TaskPoll, "bme",
-              /*stack_size=*/10000,
+              /*stack_size=*/4 * 1024,
               /*param=*/&bme_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
@@ -227,7 +228,7 @@ void setup() {
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(ui::TaskServeWeb, "TaskServeWeb",
-              /*stack_size=*/10 * 1024,
+              /*stack_size=*/8 * 1024,
               /*param=*/&ui_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
@@ -237,7 +238,7 @@ void setup() {
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(net_manager::DoTask, "NetManager",
-              /*stack_size=*/16 * 1024,
+              /*stack_size=*/8 * 1024,
               /*param=*/nullptr,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
@@ -256,11 +257,13 @@ void loop() {
   }
   last_print_time_ms = millis();
 
-  Serial.println("----------------------------------------");
-  Serial.print("loop(): Uptime: ");
-  Serial.print(dump::MillisHumanReadable(millis()));
-  Serial.print("  core: ");
-  Serial.println(xPortGetCoreID());
+  ESP_LOGI(TAG, "loop(): uptime: %s core: %d stackHighWater: %d",
+           dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+           uxTaskGetStackHighWaterMark(nullptr));
+  for (int i = 0; (1 << i) <= MALLOC_CAP_DEFAULT; ++i) {
+    ESP_LOGI(TAG, "loop(): cap_bit: %d minimum_free_size: %d", i,
+             heap_caps_get_minimum_free_size(1 << i));
+  }
 
   ESP_LOGI(TAG, "NTP sync status: %d", sntp_get_sync_status());
   time_t now;
