@@ -529,6 +529,101 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
                                  task_data->bme_data->humidity_pct));
 }
 
+#define BTN_UP 35
+#define BTN_DOWN 0
+
+struct ButtonState {
+  bool debounced_value = false;
+  bool stable = true;
+  uint8_t raw_history = 0xff;
+};
+
+void TaskButtons(void* task_data_arg) {
+  Serial.println("TaskButtons: Starting task...");
+  TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
+
+  ButtonState button_up;
+  ButtonState button_down;
+  pinMode(BTN_UP, INPUT_PULLUP);
+  pinMode(BTN_DOWN, INPUT_PULLUP);
+
+  pinMode(TFT_BL, OUTPUT);
+  ledcSetup(0, 5000, 8);     // 0-15, 5000, 8
+  ledcAttachPin(TFT_BL, 0);  // TFT_BL, 0 - 15
+  int brightness_level = 10;
+  ledcWrite(0, 255);  // 0-15, 0-255 (with 8 bit resolution);
+                      // 0=off, 255=full brightness
+
+  const TickType_t kFreqTicks = 1;  // 10ms
+  TickType_t last_wake_time_ticks = xTaskGetTickCount();
+  unsigned long last_print_time_ms = 0;
+
+  for (;;) {
+    long now_ms = millis();
+    auto old_ticks = last_wake_time_ticks;
+    vTaskDelayUntil(&last_wake_time_ticks, kFreqTicks);
+    if (last_wake_time_ticks - old_ticks != kFreqTicks) {
+      ESP_LOGW(TAG,
+               "TaskButtons(): unexpected tick. "
+               "old_ticks: %d last_wake_time_ticks: %d uptime: %s",
+               old_ticks, last_wake_time_ticks,
+               dump::MillisHumanReadable(now_ms).c_str());
+    }
+
+    if ((now_ms - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
+      ESP_LOGI(TAG, "TaskButtons(): uptime: %s core: %d stackHighWater: %d",
+               dump::MillisHumanReadable(now_ms).c_str(), xPortGetCoreID(),
+               uxTaskGetStackHighWaterMark(nullptr));
+      last_print_time_ms = now_ms;
+    }
+
+    bool pressed = false;
+    button_up.raw_history = button_up.raw_history << 1 | digitalRead(BTN_UP);
+    if (button_up.raw_history == 0b11111110 && !button_up.debounced_value) {
+      pressed = true;
+      brightness_level = std::min(brightness_level + 1, 10);
+      ESP_LOGI(TAG, "TaskButtons(): BTN_UP pressed! brightness_level: %d",
+               brightness_level);
+      button_up.debounced_value = true;
+    }
+    if (button_up.raw_history == 0b00000001 && button_up.debounced_value) {
+      ESP_LOGI(TAG, "TaskButtons(): BTN_UP un-pressed!");
+      button_up.debounced_value = false;
+    }
+
+    button_down.raw_history =
+        button_down.raw_history << 1 | digitalRead(BTN_DOWN);
+    if (button_down.raw_history == 0b11111110 && !button_down.debounced_value) {
+      pressed = true;
+      brightness_level = std::max(brightness_level - 1, 0);
+      ESP_LOGI(TAG, "TaskButtons(): BTN_DOWN pressed! brightness_level: %d",
+               brightness_level);
+      button_down.debounced_value = true;
+    }
+    if (button_down.raw_history == 0b00000001 && button_down.debounced_value) {
+      ESP_LOGI(TAG, "TaskButtons(): BTN_DOWN un-pressed!");
+      button_down.debounced_value = false;
+    }
+
+    if (pressed) {
+      float fbright = pow(brightness_level, 2.407f); // 10 ^ 2.407 == 255.3
+      // ESP_LOGI(TAG, "TaskButtons(): brightness_level: %d dim_stemp: %d fbright:
+      // %0.1f", brightness_level,
+      //          dim_step, fbright);
+      if (fbright <= 0) {
+        fbright = 0;
+      } else if (fbright >= 255) {
+        fbright = 255;
+      }
+      // ESP_LOGI(TAG, "TaskButtons(): brightness_level: %d dim_stemp: %d fbright:
+      // %0.1f", brightness_level,
+      //          dim_step, fbright);
+      ledcWrite(0, fbright);
+    }
+  }
+  vTaskDelete(NULL);
+}
+
 void TaskDisplay(void* task_data_arg) {
   Serial.println("TaskDisplay: Starting task...");
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
@@ -537,40 +632,16 @@ void TaskDisplay(void* task_data_arg) {
   tft.setRotation(1);
   spr.createSprite(/* width = */ 240, /* height= */ 135);
 
-  pinMode(TFT_BL, OUTPUT);
-  ledcSetup(0, 5000, 8);    // 0-15, 5000, 8
-  ledcAttachPin(TFT_BL, 0); // TFT_BL, 0 - 15
-  int dim = 13;
-  int dim_step = -1;
-  ledcWrite(0, 255);          // 0-15, 0-255 (with 8 bit resolution); 0=totally
-                            // dark;255=totally shiny
-
   unsigned long last_print_time_ms = 0;
   unsigned long last_display_time_ms = 0;
   int delay_ms = 1000;
   for (;; delay(delay_ms)) {
-    if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
+    if ((millis() - last_print_time_ms) > 10 * 60 * 1000 || !last_print_time_ms) {
       ESP_LOGI(TAG, "TaskDisplay(): uptime: %s core: %d stackHighWater: %d",
                dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
                uxTaskGetStackHighWaterMark(nullptr));
       last_print_time_ms = millis();
     }
-
-    dim += dim_step;
-    float fdim = pow(dim, 2.2f);
-    // ESP_LOGI(TAG, "TaskDisplay(): dim: %d dim_stemp: %d fdim: %0.1f", dim,
-    //          dim_step, fdim);
-    if (fdim <= 0) {
-      dim = 0;
-      fdim = 0;
-      dim_step = 1;
-    } else if (fdim >= 255) {
-      fdim = 255;
-      dim_step = -1;
-    }
-    // ESP_LOGI(TAG, "TaskDisplay(): dim: %d dim_stemp: %d fdim: %0.1f", dim,
-    //          dim_step, fdim);
-    ledcWrite(0, fdim);
 
     int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_2_5);
     int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm_10_0);
@@ -663,7 +734,7 @@ void TaskServeWeb(void* task_data_arg) {
   unsigned long last_client_time_ms = 0;
   for (;;) {
     delay(10);
-    if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
+    if ((millis() - last_print_time_ms) > 10 * 60 * 1000 || !last_print_time_ms) {
       ESP_LOGI(
           TAG,
           "TaskServeWeb(): uptime: %s core: %d stackHighWater: %d"

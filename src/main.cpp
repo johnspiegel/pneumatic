@@ -242,6 +242,11 @@ void setup() {
               /*param=*/nullptr,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
+  xTaskCreate(ui::TaskButtons, "TaskButtons",
+              /*stack_size=*/3 * 1024,
+              /*param=*/&ui_task_data,
+              /*priority=*/next_priority++,
+              /*handle=*/nullptr);
 
   Serial.print("setup(): core: ");
   Serial.println(xPortGetCoreID());
