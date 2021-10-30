@@ -4,6 +4,9 @@
 #include <dump.h>
 
 namespace pmsx003 {
+namespace {
+const char TAG[] = "pmsx003";
+} // namespace
 
 using dump::Ewma;
 
@@ -171,9 +174,9 @@ void TaskPoll(void* task_param) {
     }
     last_print_time_ms = millis();
 
-    Serial.print("PollPmsx003(): core: ");
-    Serial.println(xPortGetCoreID());
-
+    ESP_LOGI(TAG, "pmsx003::TaskPoll(): uptime: %s core: %d stackHighWater: %d",
+             dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+             uxTaskGetStackHighWaterMark(nullptr));
     Serial.print("PMSx003 data:");
     Serial.print("  [ug/m^3] PM1.0: ");
     Serial.print(task_data->pm_1_0);

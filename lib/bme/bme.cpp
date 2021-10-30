@@ -209,12 +209,15 @@ void TaskPoll(void* task_data_param) {
     }
     last_print_time_ms = millis();
 
-    ESP_LOGI(TAG,
-             "bme::TaskPoll(): core: %d sensor: %s "
-             "Temp: %.1f °C %.1f °F Pressure: %.3f hPa Humidity: %.1f",
-             xPortGetCoreID(), data->sensor_name,  //
-             data->temp_c, dump::CToF(data->temp_c), data->pressure_pa / 100.0,
-             data->humidity_pct);
+    ESP_LOGI(
+        TAG,
+        "bme::TaskPoll(): uptime: %s core: %d stackHighWater: %d"
+        "sensor: %s Temp: %.1f °C %.1f °F Pressure: %.3f hPa Humidity: %.1f",
+        dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+        uxTaskGetStackHighWaterMark(nullptr),
+        data->sensor_name,  //
+        data->temp_c, dump::CToF(data->temp_c), data->pressure_pa / 100.0,
+        data->humidity_pct);
   }
 
   vTaskDelete(NULL);

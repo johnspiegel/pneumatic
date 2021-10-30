@@ -4,11 +4,15 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <dump.h>
+#include <esp_log.h>
 #include <esp_wifi.h>
 
 #include <vector>
 
 namespace net_manager {
+namespace {
+const char TAG[] = "ui";
+}
 
 WiFiManager wifi_manager;
 
@@ -311,8 +315,10 @@ void DoTask(void* unused) {
     delay(10);
     if ((millis() - last_print_time_ms) > 10 * 60 * 1000 ||
         !last_print_time_ms) {
-      Serial.print("net_manager::DoTask(): core: ");
-      Serial.println(xPortGetCoreID());
+      ESP_LOGI(TAG,
+               "net_manager::DoTask(): uptime: %s core: %d stackHighWater: %d",
+               dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+               uxTaskGetStackHighWaterMark(nullptr));
       last_print_time_ms = millis();
     }
     if (false && status == STATUS_CONNECTED &&

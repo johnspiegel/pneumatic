@@ -6,14 +6,10 @@
 #include <dump.h>
 #include <esp_log.h>
 #include <esp_wifi.h>
+#include <freertos/task.h>
 
-#include "html.h"
 #include "constants.h"
-
-#define BUTTON_1 35
-#define BUTTON_2 0
-#define BUTTONS_MAP \
-  { BUTTON_1, BUTTON_2 }
+#include "html.h"
 
 namespace ui {
 
@@ -546,8 +542,9 @@ void TaskDisplay(void* task_data_arg) {
   int delay_ms = 1000;
   for (;; delay(delay_ms)) {
     if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
-      ESP_LOGI(TAG, "TaskDisplay(): uptime: %s core: %d",
-               dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID());
+      ESP_LOGI(TAG, "TaskDisplay(): uptime: %s core: %d stackHighWater: %d",
+               dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+               uxTaskGetStackHighWaterMark(nullptr));
       last_print_time_ms = millis();
     }
 
@@ -645,10 +642,10 @@ void TaskServeWeb(void* task_data_arg) {
     if ((millis() - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
       ESP_LOGI(
           TAG,
-          "TaskServeWeb(): uptime: %s core: %d server_running: %d "
-          "since_last_http_client: %s",
+          "TaskServeWeb(): uptime: %s core: %d stackHighWater: %d"
+          " server_running: %s since_last_http_client: %s",
           dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
-          bool(server),
+          uxTaskGetStackHighWaterMark(nullptr), (server ? "true" : "false"),
           dump::MillisHumanReadable(millis() - last_client_time_ms).c_str());
       if (!WiFi.isConnected()) {
         ESP_LOGW(TAG, "TaskServeWeb: Waiting for WiFi...");

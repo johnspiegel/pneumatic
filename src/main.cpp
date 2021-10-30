@@ -222,12 +222,12 @@ void setup() {
   //             /*priority=*/next_priority++,
   //             /*handle=*/nullptr);
   xTaskCreate(ui::TaskDisplay, "TaskDisplay",
-              /*stack_size=*/16 * 1024,
+              /*stack_size=*/3 * 1024,
               /*param=*/&ui_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(ui::TaskServeWeb, "TaskServeWeb",
-              /*stack_size=*/16 * 1024,
+              /*stack_size=*/10 * 1024,
               /*param=*/&ui_task_data,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
@@ -237,7 +237,7 @@ void setup() {
               /*priority=*/next_priority++,
               /*handle=*/nullptr);
   xTaskCreate(net_manager::DoTask, "NetManager",
-              /*stack_size=*/4 * 1024,
+              /*stack_size=*/16 * 1024,
               /*param=*/nullptr,
               /*priority=*/next_priority++,
               /*handle=*/nullptr);

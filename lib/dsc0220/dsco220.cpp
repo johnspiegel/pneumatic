@@ -1,6 +1,7 @@
 #include "dsco220.h"
 
 #include <Arduino.h>
+#include <dump.h>
 #include <esp_log.h>
 
 #include "pmsx003.h"
@@ -162,11 +163,11 @@ void TaskPollDsCo2(void* task_data_arg) {
       delay(1000);
       continue;
     }
-
     last_print_time_ms = millis();
 
-    Serial.print("TaskPollDsCo2(): core: ");
-    Serial.println(xPortGetCoreID());
+    ESP_LOGI(TAG, "TaskPollDsCo2(): uptime: %s core: %d stackHighWater: %d",
+             dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+             uxTaskGetStackHighWaterMark(nullptr));
     Serial.print("DS-CO2-20 Results:");
     Serial.print("  CO2: ");
     Serial.print(data->co2_ppm);
