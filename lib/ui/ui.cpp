@@ -537,6 +537,14 @@ void TaskDisplay(void* task_data_arg) {
   tft.setRotation(1);
   spr.createSprite(/* width = */ 240, /* height= */ 135);
 
+  pinMode(TFT_BL, OUTPUT);
+  ledcSetup(0, 5000, 8);    // 0-15, 5000, 8
+  ledcAttachPin(TFT_BL, 0); // TFT_BL, 0 - 15
+  int dim = 13;
+  int dim_step = -1;
+  ledcWrite(0, 255);          // 0-15, 0-255 (with 8 bit resolution); 0=totally
+                            // dark;255=totally shiny
+
   unsigned long last_print_time_ms = 0;
   unsigned long last_display_time_ms = 0;
   int delay_ms = 1000;
@@ -547,6 +555,22 @@ void TaskDisplay(void* task_data_arg) {
                uxTaskGetStackHighWaterMark(nullptr));
       last_print_time_ms = millis();
     }
+
+    dim += dim_step;
+    float fdim = pow(dim, 2.2f);
+    // ESP_LOGI(TAG, "TaskDisplay(): dim: %d dim_stemp: %d fdim: %0.1f", dim,
+    //          dim_step, fdim);
+    if (fdim <= 0) {
+      dim = 0;
+      fdim = 0;
+      dim_step = 1;
+    } else if (fdim >= 255) {
+      fdim = 255;
+      dim_step = -1;
+    }
+    // ESP_LOGI(TAG, "TaskDisplay(): dim: %d dim_stemp: %d fdim: %0.1f", dim,
+    //          dim_step, fdim);
+    ledcWrite(0, fdim);
 
     int pm25aqi = Aqi(aqi_pm2_5, 1, task_data->pmsx003_data->pm_2_5);
     int pm10aqi = Aqi(aqi_pm10_0, 0, task_data->pmsx003_data->pm_10_0);
