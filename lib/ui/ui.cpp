@@ -532,34 +532,149 @@ void DoVarz(WiFiClient* client, const TaskData* task_data) {
 #define BTN_UP 35
 #define BTN_DOWN 0
 
+class Button {
+ public:
+  Button(int press_stable_wait_ms = 50, int depress_stable_wait_ms = 50,
+         std::function<void()> pressed_cb = nullptr,
+         std::function<void()> depressed_cb = nullptr);
+
+  bool SetRawValue(bool pressed) {
+    raw_history_ = (raw_history_ << 1) | pressed;
+    if (!debounced_pressed_ &&
+        (raw_history_ & pressed_mask_) == pressed_value_) {
+      debounced_pressed_ = true;
+      if (pressed_cb_) {
+        pressed_cb_();
+      }
+    } else if (debounced_pressed_ &&
+               (raw_history_ & depressed_mask_) == depressed_value_) {
+      debounced_pressed_ = false;
+      if (depressed_cb_) {
+        depressed_cb_();
+      }
+    }
+    return debounced_pressed_;
+  }
+
+ private:
+  // true == pressed, false == depressed.
+  bool debounced_pressed_ = false;
+
+  uint8_t raw_history_ = 0xff;
+
+  const uint8_t pressed_mask_;
+  const uint8_t pressed_value_;
+  const uint8_t depressed_mask_;
+  const uint8_t depressed_value_;
+
+  const std::function<void()> pressed_cb_;
+  const std::function<void()> depressed_cb_;
+};
+
+Button::Button(int press_stable_wait_ms, int depress_stable_wait_ms,
+               std::function<void()> pressed_cb,
+               std::function<void()> depressed_cb)
+    : pressed_mask_(~(0xff << (press_stable_wait_ms / portTICK_PERIOD_MS + 1))),
+      pressed_value_(~(0xff << (depress_stable_wait_ms / portTICK_PERIOD_MS))),
+      depressed_mask_(
+          ~(0xff << (depress_stable_wait_ms / portTICK_PERIOD_MS + 1))),
+      depressed_value_(0x01 << (press_stable_wait_ms / portTICK_PERIOD_MS)),
+      pressed_cb_(pressed_cb),
+      depressed_cb_(depressed_cb) {}
+
 struct ButtonState {
   bool debounced_value = false;
   bool stable = true;
   uint8_t raw_history = 0xff;
 };
 
+class DisplayDimmer {
+ public:
+  const int kLevels = 10;
+
+  DisplayDimmer(uint8_t backlight_pin, uint8_t ledc_channel)
+      : backlight_pin_(backlight_pin), ledc_channel_(ledc_channel) {
+    pinMode(backlight_pin_, OUTPUT);
+    ledcSetup(/*channel=*/ledc_channel_, /*freq=*/5000,
+              /*resolution_bits=*/8);  // 0-15, 5000, 8
+    ledcAttachPin(/*pin=*/backlight_pin_,
+                  /*channel=*/ledc_channel_);  // TFT_BL, 0 - 15
+    SetBrightness();
+  }
+
+  void Brighten() {
+    brightness_level_ = std::min(brightness_level_ + 1, kLevels - 1);
+    SetBrightness();
+  }
+  void Dim() {
+    brightness_level_ = std::max(brightness_level_ - 1, 0);
+    SetBrightness();
+  }
+
+  int8_t BrightnessLevel() { return brightness_level_; }
+
+ private:
+
+  void SetBrightness() {
+    float fbright = pow(brightness_level_, 2.522f);  // 9 ^ 2.522 ~= 255.03
+    if (fbright <= 0) {
+      fbright = 0;
+    } else if (fbright >= 255) {
+      fbright = 255;
+    }
+    ledcWrite(/*channel=*/ledc_channel_, std::round(fbright));
+    ESP_LOGI(TAG,
+             "DisplayDimmer(): brightness_level: %d fbright: %.1f bright: %d",
+             brightness_level_, fbright, static_cast<int>(std::round(fbright)));
+  }
+
+  uint8_t backlight_pin_;
+  uint8_t ledc_channel_;
+  int8_t brightness_level_ = kLevels - 1;
+};
+
 void TaskButtons(void* task_data_arg) {
   Serial.println("TaskButtons: Starting task...");
   TaskData* task_data = reinterpret_cast<TaskData*>(task_data_arg);
 
-  ButtonState button_up;
-  ButtonState button_down;
+  DisplayDimmer dimmer(/*backlight_pin=*/TFT_BL, /*ledc_channel=*/0);
+
+  Button button_up(
+      50, 50,
+      [&dimmer]() {
+        dimmer.Brighten();
+        ESP_LOGI(TAG, "TaskButtons(): BTN_UP pressed! brightness_level: %d",
+                 dimmer.BrightnessLevel());
+      },
+      []() { ESP_LOGI(TAG, "TaskButtons(): BTN_UP un-pressed!"); });
+  Button button_down(
+      50, 50,
+      [&dimmer]() {
+        dimmer.Dim();
+        ESP_LOGI(TAG, "TaskButtons(): BTN_DOWN pressed! brightness_level: %d",
+                 dimmer.BrightnessLevel());
+      },
+      []() { ESP_LOGI(TAG, "TaskButtons(): BTN_DOWN un-pressed!"); });
   pinMode(BTN_UP, INPUT_PULLUP);
   pinMode(BTN_DOWN, INPUT_PULLUP);
-
-  pinMode(TFT_BL, OUTPUT);
-  ledcSetup(0, 5000, 8);     // 0-15, 5000, 8
-  ledcAttachPin(TFT_BL, 0);  // TFT_BL, 0 - 15
-  int brightness_level = 10;
-  ledcWrite(0, 255);  // 0-15, 0-255 (with 8 bit resolution);
-                      // 0=off, 255=full brightness
 
   const TickType_t kFreqTicks = 1;  // 10ms
   TickType_t last_wake_time_ticks = xTaskGetTickCount();
   unsigned long last_print_time_ms = 0;
 
   for (;;) {
+    button_up.SetRawValue(/*pressed=*/!digitalRead(BTN_UP));
+    button_down.SetRawValue(/*pressed=*/!digitalRead(BTN_DOWN));
+
+    // Do printing at the end so as to not perturb the tick cadence.
     long now_ms = millis();
+    if ((now_ms - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
+      ESP_LOGI(TAG, "TaskButtons(): uptime: %s core: %d stackHighWater: %d",
+               dump::MillisHumanReadable(now_ms).c_str(), xPortGetCoreID(),
+               uxTaskGetStackHighWaterMark(nullptr));
+      last_print_time_ms = now_ms;
+    }
+
     auto old_ticks = last_wake_time_ticks;
     vTaskDelayUntil(&last_wake_time_ticks, kFreqTicks);
     if (last_wake_time_ticks - old_ticks != kFreqTicks) {
@@ -568,57 +683,6 @@ void TaskButtons(void* task_data_arg) {
                "old_ticks: %d last_wake_time_ticks: %d uptime: %s",
                old_ticks, last_wake_time_ticks,
                dump::MillisHumanReadable(now_ms).c_str());
-    }
-
-    if ((now_ms - last_print_time_ms) > 10 * 1000 || !last_print_time_ms) {
-      ESP_LOGI(TAG, "TaskButtons(): uptime: %s core: %d stackHighWater: %d",
-               dump::MillisHumanReadable(now_ms).c_str(), xPortGetCoreID(),
-               uxTaskGetStackHighWaterMark(nullptr));
-      last_print_time_ms = now_ms;
-    }
-
-    bool pressed = false;
-    button_up.raw_history = button_up.raw_history << 1 | digitalRead(BTN_UP);
-    if (button_up.raw_history == 0b11111110 && !button_up.debounced_value) {
-      pressed = true;
-      brightness_level = std::min(brightness_level + 1, 10);
-      ESP_LOGI(TAG, "TaskButtons(): BTN_UP pressed! brightness_level: %d",
-               brightness_level);
-      button_up.debounced_value = true;
-    }
-    if (button_up.raw_history == 0b00000001 && button_up.debounced_value) {
-      ESP_LOGI(TAG, "TaskButtons(): BTN_UP un-pressed!");
-      button_up.debounced_value = false;
-    }
-
-    button_down.raw_history =
-        button_down.raw_history << 1 | digitalRead(BTN_DOWN);
-    if (button_down.raw_history == 0b11111110 && !button_down.debounced_value) {
-      pressed = true;
-      brightness_level = std::max(brightness_level - 1, 0);
-      ESP_LOGI(TAG, "TaskButtons(): BTN_DOWN pressed! brightness_level: %d",
-               brightness_level);
-      button_down.debounced_value = true;
-    }
-    if (button_down.raw_history == 0b00000001 && button_down.debounced_value) {
-      ESP_LOGI(TAG, "TaskButtons(): BTN_DOWN un-pressed!");
-      button_down.debounced_value = false;
-    }
-
-    if (pressed) {
-      float fbright = pow(brightness_level, 2.407f); // 10 ^ 2.407 == 255.3
-      // ESP_LOGI(TAG, "TaskButtons(): brightness_level: %d dim_stemp: %d fbright:
-      // %0.1f", brightness_level,
-      //          dim_step, fbright);
-      if (fbright <= 0) {
-        fbright = 0;
-      } else if (fbright >= 255) {
-        fbright = 255;
-      }
-      // ESP_LOGI(TAG, "TaskButtons(): brightness_level: %d dim_stemp: %d fbright:
-      // %0.1f", brightness_level,
-      //          dim_step, fbright);
-      ledcWrite(0, fbright);
     }
   }
   vTaskDelete(NULL);
