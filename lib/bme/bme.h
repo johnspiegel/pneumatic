@@ -6,7 +6,7 @@
 #include <memory>
 
 #include <Adafruit_BME280.h>
-#include <bsec.h>
+// #include <bsec.h>
 
 #define BME280_I2C_ADDRESS 0x76
 
@@ -16,7 +16,7 @@ struct Data {
   SemaphoreHandle_t i2c_mutex;
 
   std::unique_ptr<Adafruit_BME280> bme280;
-  std::unique_ptr<Bsec> bsec;
+//   std::unique_ptr<Bsec> bsec;
 
   const char* sensor_name;
   float temp_c;

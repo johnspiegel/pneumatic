@@ -12,7 +12,10 @@ using dump::Ewma;
 
 const char TAG[] = "bme";
 const int kPollPeriodMs = 1000;
+const int kPollPeriodTicks =
+    std::max<int>(1, kPollPeriodMs / portTICK_PERIOD_MS);
 
+#if 0
 bool CheckBsecStatus(const Bsec& bsec) {
   if (bsec.status != BSEC_OK) {
     if (bsec.status < BSEC_OK) {
@@ -34,6 +37,7 @@ bool CheckBsecStatus(const Bsec& bsec) {
 
   return true;
 }
+#endif
 
 void UpdateData(Data* data, float temp_c, float pressure_pa,
                 float humidity_pct) {
@@ -59,7 +63,7 @@ void UpdateData(Data* data, float temp_c, float pressure_pa,
 }
 
 bool PollBme280(Data* data) {
-    if (xSemaphoreTake(data->i2c_mutex, kPollPeriodMs / portTICK_PERIOD_MS) !=
+    if (xSemaphoreTake(data->i2c_mutex, kPollPeriodTicks) !=
         pdTRUE) {
       ESP_LOGE(TAG, "PollBme280: failed to acquire i2c mutex");
       return false;
@@ -73,8 +77,9 @@ bool PollBme280(Data* data) {
     return true;
 }
 
+#if 0
 bool PollBsec(Data* data) {
-    if (xSemaphoreTake(data->i2c_mutex, kPollPeriodMs / portTICK_PERIOD_MS) !=
+    if (xSemaphoreTake(data->i2c_mutex, kPollPeriodTicks) !=
         pdTRUE) {
       ESP_LOGE(TAG, "PollBsec: failed to acquire i2c mutex");
       return false;
@@ -107,11 +112,12 @@ bool PollBsec(Data* data) {
     xSemaphoreGive(data->i2c_mutex);
     return true;
 }
+#endif
 
 }  // namespace
 
 bool Init(Data* data) {
-  if (xSemaphoreTake(data->i2c_mutex, kPollPeriodMs / portTICK_PERIOD_MS) !=
+  if (xSemaphoreTake(data->i2c_mutex, kPollPeriodTicks) !=
       pdTRUE) {
     ESP_LOGE(TAG, "Init: failed to acquire i2c mutex");
     return false;
@@ -137,6 +143,7 @@ bool Init(Data* data) {
     ESP_LOGW(TAG, "BME280 not found at i2c: 0x%02x", BME280_I2C_ADDRESS);
   }
 
+#if 0
   // Try initializing BME68x
   {
     std::unique_ptr<Bsec> bsec(new Bsec());
@@ -176,6 +183,7 @@ bool Init(Data* data) {
     }
     ESP_LOGW(TAG, "BME680 not found at i2c: 0x%02x", BME680_I2C_ADDR_PRIMARY);
   }
+#endif
 
   xSemaphoreGive(data->i2c_mutex);
   return false;
@@ -199,21 +207,23 @@ void TaskPoll(void* task_data_param) {
     if (data->bme280 != nullptr) {
       PollBme280(data);
     }
+#if 0
     if (data->bsec != nullptr) {
       PollBsec(data);
     }
+#endif
 
-    if ((millis() - last_print_time_ms) < 10 * 60 * 1000 &&
+    if ((now_ms - last_print_time_ms) < 10 * 60 * 1000 &&
         last_print_time_ms) {
-      continue;
+      // continue;
     }
-    last_print_time_ms = millis();
+    last_print_time_ms = now_ms;
 
     ESP_LOGI(
         TAG,
         "bme::TaskPoll(): uptime: %s core: %d stackHighWater: %d"
         " sensor: %s Temp: %.1f °C %.1f °F Pressure: %.3f hPa Humidity: %.1f",
-        dump::MillisHumanReadable(millis()).c_str(), xPortGetCoreID(),
+        dump::MillisHumanReadable(now_ms).c_str(), xPortGetCoreID(),
         uxTaskGetStackHighWaterMark(nullptr),
         data->sensor_name,  //
         data->temp_c, dump::CToF(data->temp_c), data->pressure_pa / 100.0,

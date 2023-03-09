@@ -42,7 +42,7 @@
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
 // My BME680 seems unstable at 100khz.
-#define I2C_FREQ 20000
+#define I2C_FREQ 10000
 
 #define BME280_I2C_ADDRESS 0x76
 // TODO: acutally use ds-co2-20 address

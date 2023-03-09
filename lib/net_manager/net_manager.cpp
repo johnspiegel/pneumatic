@@ -89,12 +89,12 @@ bool Init() {
         Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
         status = STATUS_CONNECTED;
       },
-      WiFiEvent_t::SYSTEM_EVENT_STA_GOT_IP);
+      ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
         Serial.print("WiFi lost connection. Reason: ");
-        Serial.println(info.disconnected.reason);
+        Serial.println(info.wifi_sta_disconnected.reason);
         Serial.print("WiFi not connected; status: ");
         Serial.println(WiFi.status());
         // WiFi.persistent(false);
@@ -102,12 +102,12 @@ bool Init() {
         status = STATUS_DISCONNECTED;
         // ESP.restart();
       },
-      WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
+      ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
         // Serial.print("WiFi lost connection. Reason: ");
-        // Serial.println(info.disconnected.reason);
+        // Serial.println(info.wifi_sta_disconnected.reason);
         Serial.print("WiFi not connected; status: ");
         Serial.println(WiFi.status());
         // WiFi.persistent(false);
@@ -115,7 +115,7 @@ bool Init() {
         status = STATUS_DISCONNECTED;
         // ESP.restart();
       },
-      WiFiEvent_t::SYSTEM_EVENT_STA_STOP);
+      ARDUINO_EVENT_WIFI_STA_STOP);
 
   return true;
 }
